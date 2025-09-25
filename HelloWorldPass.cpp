@@ -9,7 +9,7 @@ using namespace llvm;
 // For the New Pass Manager, pass inherits from PassInfoMixin.
 // This allows it to be used with the PassBuilder and other New Pass Manager
 // (NPM) infrastructure.
-struct DummyPass : public PassInfoMixin<DummyPass> {
+struct HelloWorldPass : public PassInfoMixin<HelloWorldPass> {
   // The `run` method for a Function pass now takes a Function reference
   // and a FunctionAnalysisManager reference.
   // It returns PreservedAnalyses to indicate which analyses are still valid.
@@ -23,6 +23,18 @@ struct DummyPass : public PassInfoMixin<DummyPass> {
   // Every NPM pass needs a static 'name' method. This is the string
   // that is used with `-passes=`.
   static StringRef name() { return "hello-world"; }
+
+  // This indicates that the pass should always run.
+  // Some passes might return false if they're not always necessary.
+  static bool isRequired() { return true; }
+
+  // Override skipFunction to prevent the pass manager from skipping
+  // due to 'optnone' or other reasons. Always return false to run on all
+  // functions.
+  bool skipFunction(const Function &F) const {
+    // You could add logic here to conditionally skip,
+    return false;
+  }
 };
 
 // This is the crucial entry point for a dynamically loaded LLVM Pass Plugin.
@@ -40,7 +52,7 @@ extern "C" LLVM_ATTRIBUTE_WEAK PassPluginLibraryInfo llvmGetPassPluginInfo() {
                 [](StringRef Name, FunctionPassManager &FPM,
                    ArrayRef<PassBuilder::PipelineElement>) {
                   if (Name == "hello-world") {
-                    FPM.addPass(DummyPass());
+                    FPM.addPass(HelloWorldPass());
                     return true;
                   }
                   return false;
