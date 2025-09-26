@@ -1,9 +1,7 @@
 // test_program.c
 #include <stdio.h>
 
-void sayHello() { printf("Hello from sayHello!\n"); }
-
 int main() {
-  sayHello();
+  printf("ABCxyz123\n");
   return 0;
 }

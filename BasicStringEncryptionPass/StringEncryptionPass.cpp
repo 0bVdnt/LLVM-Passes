@@ -1,25 +1,25 @@
-// StringEncryptionPass.cpp
-#include "llvm/IR/Constants.h" // For creating constant arrays, strings
+// StringEncryptionPass.cpp (Fixed version)
+
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/GlobalVariable.h" // For working with global strings
-#include "llvm/IR/IRBuilder.h"      // For easily creating new instructions
+#include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Utils/ModuleUtils.h" // For `appendToCompilerUsed`
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 
-#include <algorithm> // For std::reverse
+#include <algorithm>
 #include <string>
 #include <vector>
 
 using namespace llvm;
 
-// Define a simple XOR encryption key
 static const char XOR_KEY = 0xAB;
 
-// Helper function for encryption (can be more complex later)
 std::vector<char> encryptString(StringRef S) {
   std::vector<char> Encrypted(S.begin(), S.end());
   for (char &C : Encrypted) {
@@ -33,19 +33,14 @@ struct StringEncryptionPass : public PassInfoMixin<StringEncryptionPass> {
     bool Changed = false;
     std::vector<GlobalVariable *> StringGlobalsToEncrypt;
 
-    // 1. Identify global string constants
     for (GlobalVariable &GV : M.globals()) {
       if (GV.isConstant() && GV.hasInitializer() &&
           GV.getInitializer()->getType()->isAggregateType()) {
         if (ConstantDataArray *CDA =
                 dyn_cast<ConstantDataArray>(GV.getInitializer())) {
           if (CDA->isString()) {
-            // Exclude common LLVM debug info strings or known internal strings
-            // FIX: Changed .startswith to .starts_with for StringRef
             if (GV.getName().starts_with(".str.") ||
-                GV.getName().starts_with(
-                    ".str")) { // Common string literal names
-                               // This is a candidate for encryption
+                GV.getName().starts_with(".str")) {
               StringGlobalsToEncrypt.push_back(&GV);
             }
           }
@@ -54,176 +49,209 @@ struct StringEncryptionPass : public PassInfoMixin<StringEncryptionPass> {
     }
 
     if (StringGlobalsToEncrypt.empty()) {
-      return PreservedAnalyses::all(); // No strings to encrypt
+      return PreservedAnalyses::all();
     }
 
-    // 2. Inject decryption stub function (only once)
     FunctionCallee DecryptFunc = injectDecryptionStub(M);
+    LLVMContext &Ctx = M.getContext();
+    PointerType *Int8PtrTy = PointerType::get(Ctx, 0);
+    Type *Int32Ty = Type::getInt32Ty(Ctx);
 
-    // 3. Encrypt and replace uses for each identified string
     for (GlobalVariable *GV : StringGlobalsToEncrypt) {
-      StringRef OriginalString =
+      StringRef OriginalStringRef =
           cast<ConstantDataArray>(GV->getInitializer())->getAsString();
 
-      // Skip empty strings
-      if (OriginalString.empty())
+      if (OriginalStringRef.empty())
         continue;
 
       errs() << "Chakravyuha StringEncrypt: Encrypting string -> "
-             << OriginalString << "\n";
+             << OriginalStringRef << "\n";
 
-      // Encrypt the string
-      std::vector<char> EncryptedBytes = encryptString(OriginalString);
-      EncryptedBytes.push_back('\0');
-      // Create a new global variable for the encrypted bytes
-      // +1 for null terminator, as LLVM's getAsString() usually includes it
-      ArrayType *ArrTy = ArrayType::get(Type::getInt8Ty(M.getContext()),
-                                        EncryptedBytes.size());
-      Constant *EncryptedConst = ConstantDataArray::get(
-          M.getContext(), ArrayRef<char>(EncryptedBytes));
+      std::vector<char> EncryptedBytes = encryptString(OriginalStringRef);
+      // Keep the null terminator
+      EncryptedBytes.back() = '\0' ^ XOR_KEY; // Encrypt the null terminator too
 
-      GlobalVariable *EncryptedGV = new GlobalVariable(
-          M, ArrTy, true, GlobalValue::PrivateLinkage,
-          ConstantAggregateZero::get(
-              ArrTy), // Initialize with zeros, we'll fill it if needed, though
-                      // EncryptedConst sets it
-          GV->getName() + ".enc");
-      EncryptedGV->setInitializer(EncryptedConst); // Set the encrypted content
+      ArrayType *ArrTy =
+          ArrayType::get(Type::getInt8Ty(Ctx), EncryptedBytes.size());
+      Constant *EncryptedConst =
+          ConstantDataArray::get(Ctx, ArrayRef<char>(EncryptedBytes));
 
-      // Add the new encrypted global to the "llvm.compiler.used" list
-      // to prevent it from being optimized out if no direct uses are found
+      GlobalVariable *EncryptedGV =
+          new GlobalVariable(M, ArrTy, true, GlobalValue::PrivateLinkage,
+                             EncryptedConst, GV->getName() + ".enc");
       appendToCompilerUsed(M, {EncryptedGV});
 
-      // Iterate over all uses of the original global variable
-      std::vector<User *> Users(
-          GV->user_begin(),
-          GV->user_end()); // Copy users to avoid iterator invalidation
-      for (User *U : Users) {
-        if (Instruction *Inst = dyn_cast<Instruction>(U)) {
-          IRBuilder<> Builder(
-              Inst); // Create builder at the instruction's location
+      std::vector<Use *> UsesToReplace;
+      for (Use &U : GV->uses()) {
+        UsesToReplace.push_back(&U);
+      }
 
-          // Get a pointer to the start of the encrypted data
-          Value *EncryptedPtr = Builder.CreateConstGEP2_32(
-              ArrTy, EncryptedGV, 0, 0, "encryptedPtr");
+      for (Use *U : UsesToReplace) {
+        User *CurrentUser = U->getUser();
+        Instruction *InsertionPoint = nullptr;
 
-          // Call the decryption stub
-          Value *DecryptedPtr = Builder.CreateCall(
-              DecryptFunc,
-              {EncryptedPtr,
-               Builder.getInt32(
-                   EncryptedBytes.size())}, // Pass encrypted ptr and length
-              "decryptedPtr");
+        if (Instruction *Inst = dyn_cast<Instruction>(CurrentUser)) {
+          InsertionPoint = Inst;
+        } else if (Constant *C = dyn_cast<Constant>(CurrentUser)) {
+          errs() << "Chakravyuha StringEncrypt: Warning - Constant user of GV "
+                    "not handled, skipping: "
+                 << *C << "\n";
+          continue;
+        } else {
+          errs() << "Chakravyuha StringEncrypt: Warning - Unexpected user type "
+                    "of GV, skipping: "
+                 << *CurrentUser << "\n";
+          continue;
+        }
 
-          // Replace all uses of the original GV (or its GEP) with the decrypted
-          // pointer
-          Inst->replaceUsesOfWith(GV, DecryptedPtr);
-          Changed = true;
+        if (!InsertionPoint)
+          continue;
+
+        IRBuilder<> Builder(InsertionPoint);
+
+        Value *Zero = Builder.getInt64(0);
+        Value *EncryptedBasePtr = Builder.CreateInBoundsGEP(
+            ArrTy, EncryptedGV, {Zero, Zero}, "encryptedPtr");
+
+        Value *EncryptedArgPtr = EncryptedBasePtr;
+        if (EncryptedArgPtr->getType() != Int8PtrTy) {
+          EncryptedArgPtr = Builder.CreateBitCast(EncryptedArgPtr, Int8PtrTy,
+                                                  "encryptedPtrCast");
+        }
+
+        // Allocate space on the stack for the decrypted string
+        Value *DecryptedStringAlloca = Builder.CreateAlloca(
+            ArrTy,   // Allocate array type
+            nullptr, // No explicit array size (ArrTy implies size)
+            GV->getName() + ".dec.alloca");
+
+        // Cast the alloca pointer to i8* for the decryption function
+        Value *DecryptedAllocaPtr = DecryptedStringAlloca;
+        if (DecryptedAllocaPtr->getType() != Int8PtrTy) {
+          DecryptedAllocaPtr = Builder.CreateBitCast(
+              DecryptedAllocaPtr, Int8PtrTy, "decryptedAllocaPtrCast");
+        }
+
+        // Call the decryption stub with:
+        // 1. Destination buffer (decrypted alloca)
+        // 2. Source buffer (encrypted string)
+        // 3. Length (including null terminator)
+        Builder.CreateCall(
+            DecryptFunc,
+            {DecryptedAllocaPtr, // Destination
+             EncryptedArgPtr,    // Source (encrypted)
+             Builder.getInt32(
+                 EncryptedBytes.size())}, // Full size including null
+            "");
+
+        // Replace the original use with the pointer to the decrypted string
+        U->set(DecryptedAllocaPtr);
+        Changed = true;
+      }
+
+      if (!GV->user_empty()) {
+        errs() << "Chakravyuha StringEncrypt: ERROR - Original GV still has "
+                  "users after replacement: "
+               << *GV << "\n";
+        for (User *U_dbg : GV->users()) {
+          errs() << "  Remaining user: " << *U_dbg << "\n";
         }
       }
-      // Now that all uses are replaced, we can erase the original
-      // GlobalVariable
       GV->eraseFromParent();
     }
 
     if (Changed) {
-      return PreservedAnalyses::none(); // We modified the IR significantly
+      return PreservedAnalyses::none();
     }
     return PreservedAnalyses::all();
   }
 
-  // Helper to inject the decryption function into the module
+  // Helper function to inject the decryption stub function into the module
   FunctionCallee injectDecryptionStub(Module &M) {
     LLVMContext &Ctx = M.getContext();
-    Type *VoidTy = Type::getVoidTy(Ctx);
-    // FIX: Changed Type::getInt8PtrTy(Ctx) to
-    // Type::getInt8Ty(Ctx)->getPointerTo()
-    Type *Int8PtrTy = Type::getInt8Ty(Ctx)->getPointerTo();
+    Type *Int8PtrTy = PointerType::get(Ctx, 0);
     Type *Int32Ty = Type::getInt32Ty(Ctx);
+    Type *VoidTy = Type::getVoidTy(Ctx);
 
-    // Define the function type: char* decrypt_string(char* encrypted_ptr, int
+    // Changed signature: void decrypt(char *dest, const char *src, int32_t
     // length)
-    FunctionType *DecryptFTy = FunctionType::get(
-        Int8PtrTy, {Int8PtrTy, Int32Ty}, false); // Returns char*
+    FunctionType *DecryptFTy =
+        FunctionType::get(VoidTy, {Int8PtrTy, Int8PtrTy, Int32Ty}, false);
 
-    // Get or create the function
     Function *DecryptF = M.getFunction("chakravyuha_decrypt_string");
     if (!DecryptF) {
       DecryptF = Function::Create(DecryptFTy, GlobalValue::PrivateLinkage,
                                   "chakravyuha_decrypt_string", M);
       DecryptF->setCallingConv(CallingConv::C);
-
-      // Add attributes for better compatibility
-      DecryptF->addFnAttr(
-          Attribute::NoInline); // Prevents inlining, keeping stub separate
+      DecryptF->addFnAttr(Attribute::NoInline);
       DecryptF->addFnAttr(Attribute::NoUnwind);
 
-      // Create the entry basic block
+      Function::arg_iterator ArgIt = DecryptF->arg_begin();
+      Argument *DestPtr = ArgIt++;
+      DestPtr->setName("dest_ptr");
+      Argument *SrcPtr = ArgIt++;
+      SrcPtr->setName("src_ptr");
+      Argument *Length = ArgIt++;
+      Length->setName("length");
+
       BasicBlock *EntryBB = BasicBlock::Create(Ctx, "entry", DecryptF);
       IRBuilder<> Builder(EntryBB);
 
-      // Get arguments
-      Argument *EncryptedPtr = DecryptF->arg_begin();
-      EncryptedPtr->setName("encrypted_ptr");
-      Argument *Length = DecryptF->arg_begin() + 1;
-      Length->setName("length");
+      BasicBlock *LoopHeader = BasicBlock::Create(Ctx, "loop_header", DecryptF);
+      BasicBlock *LoopBody = BasicBlock::Create(Ctx, "loop_body", DecryptF);
+      BasicBlock *LoopExit = BasicBlock::Create(Ctx, "loop_exit", DecryptF);
 
-      // Loop through the encrypted bytes and XOR them
-      Value *LoopVar = Builder.CreateAlloca(Int32Ty, nullptr, "loop_var");
-      Builder.CreateStore(Builder.getInt32(0), LoopVar);
+      Builder.CreateBr(LoopHeader);
 
-      BasicBlock *LoopCondBB = BasicBlock::Create(Ctx, "loop_cond", DecryptF);
-      BasicBlock *LoopBodyBB = BasicBlock::Create(Ctx, "loop_body", DecryptF);
-      BasicBlock *LoopEndBB = BasicBlock::Create(Ctx, "loop_end", DecryptF);
+      Builder.SetInsertPoint(LoopHeader);
+      PHINode *IndexPhi = Builder.CreatePHI(Int32Ty, 2, "index");
+      IndexPhi->addIncoming(Builder.getInt32(0), EntryBB);
 
-      Builder.CreateBr(LoopCondBB); // Jump to condition
+      Value *LoopCondition =
+          Builder.CreateICmpSLT(IndexPhi, Length, "loop_cond");
+      Builder.CreateCondBr(LoopCondition, LoopBody, LoopExit);
 
-      // Loop Condition
-      Builder.SetInsertPoint(LoopCondBB);
-      Value *CurrentIdx = Builder.CreateLoad(Int32Ty, LoopVar, "current_idx");
-      Value *Condition = Builder.CreateICmpSLT(CurrentIdx, Length, "loop_cond");
-      Builder.CreateCondBr(Condition, LoopBodyBB, LoopEndBB);
+      Builder.SetInsertPoint(LoopBody);
 
-      // Loop Body
-      Builder.SetInsertPoint(LoopBodyBB);
-      Value *ElementPtr = Builder.CreateGEP(Type::getInt8Ty(Ctx), EncryptedPtr,
-                                            CurrentIdx, "element_ptr");
+      // Read from source
+      Value *SrcCharPtr = Builder.CreateGEP(Type::getInt8Ty(Ctx), SrcPtr,
+                                            IndexPhi, "src_char_ptr");
       Value *LoadedByte =
-          Builder.CreateLoad(Type::getInt8Ty(Ctx), ElementPtr, "loaded_byte");
+          Builder.CreateLoad(Type::getInt8Ty(Ctx), SrcCharPtr, "loaded_byte");
+
+      // Decrypt
       Value *DecryptedByte = Builder.CreateXor(
           LoadedByte, Builder.getInt8(XOR_KEY), "decrypted_byte");
-      Builder.CreateStore(DecryptedByte,
-                          ElementPtr); // Write back decrypted byte
 
-      Value *NextIdx =
-          Builder.CreateAdd(CurrentIdx, Builder.getInt32(1), "next_idx");
-      Builder.CreateStore(NextIdx, LoopVar);
-      Builder.CreateBr(LoopCondBB); // Jump back to condition
+      // Write to destination
+      Value *DestCharPtr = Builder.CreateGEP(Type::getInt8Ty(Ctx), DestPtr,
+                                             IndexPhi, "dest_char_ptr");
+      Builder.CreateStore(DecryptedByte, DestCharPtr);
 
-      // Loop End
-      Builder.SetInsertPoint(LoopEndBB);
-      Builder.CreateRet(
-          EncryptedPtr); // Return pointer to the now-decrypted string
+      Value *NextIndex =
+          Builder.CreateAdd(IndexPhi, Builder.getInt32(1), "next_index");
+      IndexPhi->addIncoming(NextIndex, LoopBody);
+      Builder.CreateBr(LoopHeader);
+
+      Builder.SetInsertPoint(LoopExit);
+      Builder.CreateRetVoid();
     }
     return FunctionCallee(DecryptF->getFunctionType(), DecryptF);
   }
 
   static StringRef name() { return "chakravyuha-string-encrypt"; }
   static bool isRequired() { return true; }
-  bool skipFunction(const Function &F) const {
-    return false;
-  } // Always run on functions within module
+  bool skipFunction(const Function &F) const { return false; }
 };
 
 extern "C" LLVM_ATTRIBUTE_WEAK PassPluginLibraryInfo llvmGetPassPluginInfo() {
   return {LLVM_PLUGIN_API_VERSION, "ChakravyuhaStringEncryptionPassPlugin",
           "v0.1", [](PassBuilder &PB) {
             PB.registerPipelineParsingCallback(
-                [](StringRef Name,
-                   ModulePassManager &MPM, // Changed to ModulePassManager
+                [](StringRef Name, ModulePassManager &MPM,
                    ArrayRef<PassBuilder::PipelineElement>) {
                   if (Name == "chakravyuha-string-encrypt") {
-                    MPM.addPass(StringEncryptionPass()); // Add as a Module pass
+                    MPM.addPass(StringEncryptionPass());
                     return true;
                   }
                   return false;
