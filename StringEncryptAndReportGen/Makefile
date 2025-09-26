@@ -32,7 +32,7 @@ $(LL): $(SRC)
 # Step 2: run the custom opt pass to produce obfuscated.ll
 $(OBF_LL): $(LL) $(PASS_SO)
 	@echo "[2/4] obfuscating with plugin: $(PASS_SO)"
-	$(OPT) $(OPT_PASSES) < $(LL) > $(OBF_LL)
+	$(OPT) $(OPT_PASSES) < $(LL) > $(OBF_LL) 2> report.json
 
 # Step 3: compile/link obfuscated.ll -> binary
 $(BIN): $(OBF_LL)
