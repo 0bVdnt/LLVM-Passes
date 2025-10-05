@@ -264,9 +264,14 @@ summary:
 view:
 	@if [ -f "$(RESULTS_DIR)/visualizations/comparison/index.html" ]; then \
 		echo "Opening comparison viewer in browser..."; \
-		xdg-open "$(RESULTS_DIR)/visualizations/comparison/index.html" 2>/dev/null || \
-		open "$(RESULTS_DIR)/visualizations/comparison/index.html" 2>/dev/null || \
-		echo "Please open $(RESULTS_DIR)/visualizations/comparison/index.html in your browser"; \
+		if command -v xdg-open > /dev/null; then \
+			xdg-open "$(RESULTS_DIR)/visualizations/comparison/index.html" || true; \
+		elif command -v open > /dev/null; then \
+			open "$(RESULTS_DIR)/visualizations/comparison/index.html" || true; \
+		else \
+			echo "Could not find xdg-open (Linux) or open (macOS). Please open the file manually:"; \
+			echo "$(RESULTS_LDIR)/visualizations/comparison/index.html"; \
+		fi; \
 	else \
 		echo "No comparison HTML found. Run 'make visualize' first."; \
 	fi

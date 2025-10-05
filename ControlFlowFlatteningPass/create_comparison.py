@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+
 def create_comparison_html():
     """Create an interactive HTML page for comparing CFGs"""
 
@@ -12,24 +13,40 @@ def create_comparison_html():
     # Collect all test results
     tests = {}
 
+    tests_dir = Path("tests")
+    known_test_names = sorted([p.stem for p in tests_dir.glob("test_*.c")])
+
     # Find all original visualizations
     orig_dir = viz_dir / "original"
     obf_dir = viz_dir / "obfuscated"
 
     if orig_dir.exists():
         for orig_img in orig_dir.glob("*.png"):
-            # Parse the filename: test_name_function.dot.png
-            parts = orig_img.stem.split("_", 2)  # Split into at most 3 parts
-            if len(parts) >= 2:
-                test_name = "_".join(parts[:2]) if parts[0] == "test" else parts[0]
-                func_name = parts[-1] if len(parts) > 2 else parts[1]
-            else:
-                test_name = parts[0]
-                func_name = "main"
+            # Clean the stem by removing the .dot suffix if it exists
+            img_stem = orig_img.stem.replace(".dot", "")
+
+            test_name = None
+            func_name = None
+
+            # >>> NEW: Robustly find the test name by checking for a prefix
+            for name in known_test_names:
+                # Check if the image stem starts with the test name followed by an underscore
+                if img_stem.startswith(name + "_"):
+                    test_name = name
+                    # The function name is everything after the prefix
+                    func_name = img_stem[len(name) + 1 :]
+                    break  # Found our match, stop searching
+
+            # If no prefix was found, it might be a test with no function suffix
+            if not test_name:
+                if img_stem in known_test_names:
+                    test_name = img_stem
+                    func_name = "main"  # Assume main if no function is specified
+                else:
+                    continue  # Skip this image if we can't parse it
 
             if test_name not in tests:
                 tests[test_name] = {}
-
             obf_img = obf_dir / orig_img.name
 
             if obf_img.exists():
@@ -44,16 +61,23 @@ def create_comparison_html():
     if logs_dir.exists():
         for log_file in logs_dir.glob("*.log"):
             test_name = log_file.stem
+            metrics[test_name] = {}  # Default to empty metrics
             with open(log_file, "r") as f:
-                content = f.read()
-                if "CFF_METRICS:" in content:
-                    for line in content.split("\n"):
-                        if "CFF_METRICS:" in line:
-                            metric_json = line.split("CFF_METRICS:")[1].strip()
-                            try:
-                                metrics[test_name] = json.loads(metric_json)
-                            except:
-                                metrics[test_name] = {}
+                for line in f:
+                    # Find the marker in the current line
+                    if "CFF_METRICS:" in line:
+                        try:
+                            # Find the start of the JSON object '{' after the marker
+                            json_start_pos = line.find("{")
+                            if json_start_pos != -1:
+                                # The rest of the line from '{' is our JSON
+                                metric_json_str = line[json_start_pos:]
+                                metrics[test_name] = json.loads(metric_json_str)
+                                # Found it, no need to check other lines in this file
+                                break
+                        except (json.JSONDecodeError, IndexError):
+                            # If parsing fails for any reason, we keep empty metrics
+                            # and move to the next file
                             break
 
     # Create HTML (rest of the HTML generation code remains the same)
@@ -312,12 +336,12 @@ def create_comparison_html():
 
             <script>
                 const tests = """
-                + json.dumps(tests, indent=4)
-                + """;
+        + json.dumps(tests, indent=4)
+        + """;
                 
                 const metrics = """
-                + json.dumps(metrics, indent=4)
-                + """;
+        + json.dumps(metrics, indent=4)
+        + """;
 
                 let currentMode = 'side-by-side';
                 let currentTest = '';
@@ -413,8 +437,13 @@ def create_comparison_html():
                     const overlay = container.querySelector('div');
                     overlay.style.left = slider.value + '%';
                 }
-
+                
                 function toggleMetrics() {
+                    // First, always ensure the metrics content is up-to-date
+                    // for the currently selected test.
+                    updateMetrics();
+
+                    // Then, toggle the visibility of the container.
                     const metricsDiv = document.getElementById('metrics');
                     metricsDiv.classList.toggle('show');
                 }
