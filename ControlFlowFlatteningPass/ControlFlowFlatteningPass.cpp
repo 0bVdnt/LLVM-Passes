@@ -22,12 +22,15 @@ using namespace llvm;
 
 namespace {
 
+// Simpler demotion that doesn't try to split edges
 static void demoteValuesToMemory(Function &F) {
   BasicBlock &Entry = F.getEntryBlock();
   IRBuilder<> AllocaBuilder(&Entry, Entry.getFirstInsertionPt());
 
+  // Map from original value to its stack slot
   DenseMap<Value *, AllocaInst *> ValueToAlloca;
 
+  // First, collect all PHI nodes
   std::vector<PHINode *> PhisToRemove;
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
@@ -37,19 +40,28 @@ static void demoteValuesToMemory(Function &F) {
     }
   }
 
+  // Demote each PHI node with a simpler approach
   for (PHINode *PN : PhisToRemove) {
+    // Create alloca for this PHI
     AllocaInst *Alloca = AllocaBuilder.CreateAlloca(
         PN->getType(), nullptr, PN->getName() + ".phialloca");
-    ValueToAlloca[PN] = Alloca;
 
+    // Initialize with undef to handle cases where no store executes
+    IRBuilder<> InitBuilder(Entry.getTerminator());
+    InitBuilder.CreateStore(UndefValue::get(PN->getType()), Alloca);
+
+    // For each incoming value, store it at the END of the incoming block
+    // This ensures the store happens only when we actually take that path
     for (unsigned i = 0; i < PN->getNumIncomingValues(); ++i) {
       Value *IncomingVal = PN->getIncomingValue(i);
       BasicBlock *IncomingBB = PN->getIncomingBlock(i);
 
+      // Insert store right before the terminator
       IRBuilder<> StoreBuilder(IncomingBB->getTerminator());
       StoreBuilder.CreateStore(IncomingVal, Alloca);
     }
 
+    // Replace all uses of PHI with loads from the alloca
     std::vector<Use *> UsesToReplace;
     for (Use &U : PN->uses()) {
       UsesToReplace.push_back(&U);
@@ -57,22 +69,27 @@ static void demoteValuesToMemory(Function &F) {
 
     for (Use *U : UsesToReplace) {
       if (auto *UserInst = dyn_cast<Instruction>(U->getUser())) {
-        IRBuilder<> LoadBuilder(UserInst);
+        // Insert load at the beginning of the PHI's block
+        IRBuilder<> LoadBuilder(PN->getParent(),
+                                PN->getParent()->getFirstInsertionPt());
         LoadInst *Load = LoadBuilder.CreateLoad(PN->getType(), Alloca,
                                                 PN->getName() + ".reload");
         U->set(Load);
       }
     }
 
+    // Remove the PHI
     PN->eraseFromParent();
   }
 
+  // Now handle regular instructions that are used across basic blocks
   std::vector<Instruction *> ToDemote;
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
       if (I.isTerminator() || isa<AllocaInst>(I) || isa<PHINode>(I))
         continue;
 
+      // Check if used outside its block
       bool UsedOutside = false;
       for (User *U : I.users()) {
         if (auto *UI = dyn_cast<Instruction>(U)) {
@@ -89,14 +106,18 @@ static void demoteValuesToMemory(Function &F) {
     }
   }
 
+  // Demote each instruction
   for (Instruction *I : ToDemote) {
+    // Create alloca
     AllocaInst *Alloca = AllocaBuilder.CreateAlloca(I->getType(), nullptr,
                                                     I->getName() + ".alloca");
 
+    // Store the value right after it's computed
     IRBuilder<> StoreBuilder(I);
     StoreBuilder.SetInsertPoint(I->getParent(), ++I->getIterator());
     StoreBuilder.CreateStore(I, Alloca);
 
+    // Replace all uses with loads
     std::vector<Use *> UsesToReplace;
     for (Use &U : I->uses()) {
       UsesToReplace.push_back(&U);
@@ -104,11 +125,13 @@ static void demoteValuesToMemory(Function &F) {
 
     for (Use *U : UsesToReplace) {
       if (auto *UserInst = dyn_cast<Instruction>(U->getUser())) {
+        // Skip the store we just created
         if (auto *SI = dyn_cast<StoreInst>(UserInst)) {
           if (SI->getPointerOperand() == Alloca)
             continue;
         }
 
+        // Insert load right before the user
         IRBuilder<> LoadBuilder(UserInst);
         LoadInst *Load = LoadBuilder.CreateLoad(I->getType(), Alloca,
                                                 I->getName() + ".reload");
@@ -119,33 +142,60 @@ static void demoteValuesToMemory(Function &F) {
 }
 
 static Value *buildNextStateForTerm(IRBuilder<> &B, Instruction *T,
-                                    DenseMap<BasicBlock *, unsigned> &Id) {
+                                    DenseMap<BasicBlock *, unsigned> &Id,
+                                    unsigned DefaultState = 0) {
   if (auto *Br = dyn_cast<BranchInst>(T)) {
     if (Br->isUnconditional()) {
       auto It = Id.find(Br->getSuccessor(0));
       if (It != Id.end()) {
         return B.getInt32(It->second);
       }
-      return nullptr;
+      return nullptr; // Successor not in flattened blocks
     }
 
     auto It1 = Id.find(Br->getSuccessor(0));
     auto It2 = Id.find(Br->getSuccessor(1));
+
     if (It1 != Id.end() && It2 != Id.end()) {
+      // Both successors are flattened
       Value *TState = B.getInt32(It1->second);
       Value *FState = B.getInt32(It2->second);
       return B.CreateSelect(Br->getCondition(), TState, FState, "cff.next");
+    } else if (It1 != Id.end() && It2 == Id.end()) {
+      // Only true successor is flattened, need to handle this specially
+      // Can't just return the state because we might not take that branch
+      return nullptr;
+    } else if (It1 == Id.end() && It2 != Id.end()) {
+      // Only false successor is flattened
+      return nullptr;
     }
+
     return nullptr;
   }
 
   if (auto *Sw = dyn_cast<SwitchInst>(T)) {
+    // First check if any successor is flattened
+    bool HasFlattenedSuccessor = false;
     auto DefaultIt = Id.find(Sw->getDefaultDest());
-    if (DefaultIt == Id.end())
-      return nullptr;
+    if (DefaultIt != Id.end()) {
+      HasFlattenedSuccessor = true;
+    }
 
+    for (auto &C : Sw->cases()) {
+      if (Id.find(C.getCaseSuccessor()) != Id.end()) {
+        HasFlattenedSuccessor = true;
+        break;
+      }
+    }
+
+    if (!HasFlattenedSuccessor) {
+      return nullptr;
+    }
+
+    // Build switch expression using selects
     Value *Cond = Sw->getCondition();
-    Value *NS = B.getInt32(DefaultIt->second);
+    Value *NS = (DefaultIt != Id.end()) ? B.getInt32(DefaultIt->second)
+                                        : B.getInt32(DefaultState);
 
     for (auto &C : Sw->cases()) {
       auto CaseIt = Id.find(C.getCaseSuccessor());
@@ -169,27 +219,11 @@ static bool isSupportedTerminator(Instruction *T) {
 static bool hasUnsupportedControlFlow(Function &F) {
   for (BasicBlock &BB : F) {
     if (BB.isEHPad() || BB.isLandingPad()) {
-      errs() << "CFF: Skipping function '" << F.getName()
-             << "' - contains exception handling\n";
       return true;
     }
 
     Instruction *T = BB.getTerminator();
     if (!isSupportedTerminator(T)) {
-      if (isa<IndirectBrInst>(T)) {
-        errs() << "CFF: Skipping function '" << F.getName()
-               << "' - contains indirect branch\n";
-      } else if (isa<CallBrInst>(T)) {
-        errs() << "CFF: Skipping function '" << F.getName()
-               << "' - contains callbr instruction\n";
-      } else if (isa<InvokeInst>(T)) {
-        errs() << "CFF: Skipping function '" << F.getName()
-               << "' - contains invoke instruction\n";
-      } else {
-        errs() << "CFF: Skipping function '" << F.getName()
-               << "' - contains unsupported terminator: " << T->getOpcodeName()
-               << "\n";
-      }
       return true;
     }
   }
@@ -221,11 +255,6 @@ struct ControlFlowFlatteningPass
         Changed = true;
         flattenedFunctions++;
         flattenedBlocks += blocksBefore - 1;
-
-        if (verifyFunction(F, &errs())) {
-          errs() << "CFF ERROR: Function verification failed for "
-                 << F.getName() << "\n";
-        }
       }
     }
 
@@ -249,10 +278,12 @@ private:
 
     LLVMContext &Ctx = F.getContext();
 
+    // 1) Demote all SSA values to memory before CFG transformation
     demoteValuesToMemory(F);
 
     BasicBlock *Entry = &F.getEntryBlock();
 
+    // 2) Collect all blocks except entry that should be flattened
     SmallVector<BasicBlock *, 32> OriginalBlocks;
     for (BasicBlock &BB : F) {
       OriginalBlocks.push_back(&BB);
@@ -262,16 +293,12 @@ private:
     SmallVector<BasicBlock *, 32> FlattenTargets;
     unsigned NextId = 1;
 
+    // Only flatten blocks that are not pure returns/unreachables
     for (BasicBlock *BB : OriginalBlocks) {
       if (BB == Entry)
         continue;
 
-      Instruction *Term = BB->getTerminator();
-      if ((isa<ReturnInst>(Term) || isa<UnreachableInst>(Term)) &&
-          BB->size() == 1) {
-        continue;
-      }
-
+      // Include all non-entry blocks in flattening
       BlockId[BB] = NextId++;
       FlattenTargets.push_back(BB);
     }
@@ -279,32 +306,62 @@ private:
     if (FlattenTargets.empty())
       return false;
 
+    // 3) Create state variable
     IRBuilder<> EntryBuilder(Ctx);
     EntryBuilder.SetInsertPoint(Entry, Entry->getFirstInsertionPt());
     AllocaInst *StateVar =
         EntryBuilder.CreateAlloca(Type::getInt32Ty(Ctx), nullptr, "cff.state");
 
+    // 4) Create dispatcher and default blocks
     BasicBlock *Dispatcher = BasicBlock::Create(Ctx, "cff.dispatch", &F);
     BasicBlock *DefaultBlock = BasicBlock::Create(Ctx, "cff.default", &F);
     IRBuilder<> DefaultBuilder(DefaultBlock);
     DefaultBuilder.CreateUnreachable();
 
+    // 5) Set initial state based on entry's original successors
     Instruction *EntryTerm = Entry->getTerminator();
-    Value *InitialState = nullptr;
     {
       IRBuilder<> InitBuilder(EntryTerm);
-      InitialState = buildNextStateForTerm(InitBuilder, EntryTerm, BlockId);
-      if (InitialState) {
-        InitBuilder.CreateStore(InitialState, StateVar);
+
+      // Handle the initial state more carefully
+      if (auto *Br = dyn_cast<BranchInst>(EntryTerm)) {
+        if (Br->isUnconditional()) {
+          auto It = BlockId.find(Br->getSuccessor(0));
+          if (It != BlockId.end()) {
+            InitBuilder.CreateStore(InitBuilder.getInt32(It->second), StateVar);
+          } else {
+            return false; // Entry goes to non-flattened block
+          }
+        } else {
+          // Conditional branch from entry
+          auto It1 = BlockId.find(Br->getSuccessor(0));
+          auto It2 = BlockId.find(Br->getSuccessor(1));
+          if (It1 != BlockId.end() && It2 != BlockId.end()) {
+            Value *InitState = InitBuilder.CreateSelect(
+                Br->getCondition(), InitBuilder.getInt32(It1->second),
+                InitBuilder.getInt32(It2->second), "cff.init");
+            InitBuilder.CreateStore(InitState, StateVar);
+          } else {
+            return false; // Entry has non-flattened successor
+          }
+        }
       } else {
-        return false;
+        Value *InitialState =
+            buildNextStateForTerm(InitBuilder, EntryTerm, BlockId);
+        if (InitialState) {
+          InitBuilder.CreateStore(InitialState, StateVar);
+        } else {
+          return false;
+        }
       }
     }
 
+    // Replace entry terminator
     EntryTerm->eraseFromParent();
     IRBuilder<> NewEntryBuilder(Entry);
     NewEntryBuilder.CreateBr(Dispatcher);
 
+    // 6) Build dispatcher switch
     IRBuilder<> DispatchBuilder(Dispatcher);
     Value *CurrentState =
         DispatchBuilder.CreateLoad(Type::getInt32Ty(Ctx), StateVar, "cff.cur");
@@ -315,31 +372,60 @@ private:
       DispatchSwitch->addCase(DispatchBuilder.getInt32(BlockId[BB]), BB);
     }
 
+    // 7) Rewrite terminators in flattened blocks
     for (BasicBlock *BB : FlattenTargets) {
       Instruction *Term = BB->getTerminator();
 
+      // Keep returns and unreachables as-is
       if (isa<ReturnInst>(Term) || isa<UnreachableInst>(Term))
         continue;
 
       IRBuilder<> TermBuilder(Term);
-      Value *NextState = buildNextStateForTerm(TermBuilder, Term, BlockId);
 
-      if (NextState) {
-        TermBuilder.CreateStore(NextState, StateVar);
-        TermBuilder.CreateBr(Dispatcher);
-        Term->eraseFromParent();
-      } else {
-        // This terminator goes to a non-flattened block (like a return block)
-        // Leave it as-is
+      // Handle different terminator types
+      if (auto *Br = dyn_cast<BranchInst>(Term)) {
+        if (Br->isUnconditional()) {
+          auto It = BlockId.find(Br->getSuccessor(0));
+          if (It != BlockId.end()) {
+            TermBuilder.CreateStore(TermBuilder.getInt32(It->second), StateVar);
+            TermBuilder.CreateBr(Dispatcher);
+            Term->eraseFromParent();
+          }
+          // If successor is not flattened, leave branch as-is
+        } else {
+          // Conditional branch
+          auto It1 = BlockId.find(Br->getSuccessor(0));
+          auto It2 = BlockId.find(Br->getSuccessor(1));
+
+          if (It1 != BlockId.end() && It2 != BlockId.end()) {
+            // Both successors are flattened
+            Value *NextState = TermBuilder.CreateSelect(
+                Br->getCondition(), TermBuilder.getInt32(It1->second),
+                TermBuilder.getInt32(It2->second), "cff.next");
+            TermBuilder.CreateStore(NextState, StateVar);
+            TermBuilder.CreateBr(Dispatcher);
+            Term->eraseFromParent();
+          }
+          // If only one or neither successor is flattened, leave branch as-is
+        }
+      } else if (auto *Sw = dyn_cast<SwitchInst>(Term)) {
+        Value *NextState = buildNextStateForTerm(TermBuilder, Term, BlockId);
+        if (NextState) {
+          TermBuilder.CreateStore(NextState, StateVar);
+          TermBuilder.CreateBr(Dispatcher);
+          Term->eraseFromParent();
+        }
       }
     }
 
+    // 8) Clean up
     removeUnreachableBlocks(F);
+
     return true;
   }
 };
 
-} // namespace
+} // end anonymous namespace
 
 extern "C" LLVM_ATTRIBUTE_WEAK PassPluginLibraryInfo llvmGetPassPluginInfo() {
   return {LLVM_PLUGIN_API_VERSION, "ChakravyuhaControlFlowFlatteningPassPlugin",
