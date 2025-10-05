@@ -1,232 +1,345 @@
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Local.h"
 
-#include <algorithm>
-#include <map>
-#include <random>
+#include <optional>
+#include <set>
+#include <vector>
 
 using namespace llvm;
 
+namespace {
+
+static void demoteValuesToMemory(Function &F) {
+  BasicBlock &Entry = F.getEntryBlock();
+  IRBuilder<> AllocaBuilder(&Entry, Entry.getFirstInsertionPt());
+
+  DenseMap<Value *, AllocaInst *> ValueToAlloca;
+
+  std::vector<PHINode *> PhisToRemove;
+  for (BasicBlock &BB : F) {
+    for (Instruction &I : BB) {
+      if (auto *PN = dyn_cast<PHINode>(&I)) {
+        PhisToRemove.push_back(PN);
+      }
+    }
+  }
+
+  for (PHINode *PN : PhisToRemove) {
+    AllocaInst *Alloca = AllocaBuilder.CreateAlloca(
+        PN->getType(), nullptr, PN->getName() + ".phialloca");
+    ValueToAlloca[PN] = Alloca;
+
+    for (unsigned i = 0; i < PN->getNumIncomingValues(); ++i) {
+      Value *IncomingVal = PN->getIncomingValue(i);
+      BasicBlock *IncomingBB = PN->getIncomingBlock(i);
+
+      IRBuilder<> StoreBuilder(IncomingBB->getTerminator());
+      StoreBuilder.CreateStore(IncomingVal, Alloca);
+    }
+
+    std::vector<Use *> UsesToReplace;
+    for (Use &U : PN->uses()) {
+      UsesToReplace.push_back(&U);
+    }
+
+    for (Use *U : UsesToReplace) {
+      if (auto *UserInst = dyn_cast<Instruction>(U->getUser())) {
+        IRBuilder<> LoadBuilder(UserInst);
+        LoadInst *Load = LoadBuilder.CreateLoad(PN->getType(), Alloca,
+                                                PN->getName() + ".reload");
+        U->set(Load);
+      }
+    }
+
+    PN->eraseFromParent();
+  }
+
+  std::vector<Instruction *> ToDemote;
+  for (BasicBlock &BB : F) {
+    for (Instruction &I : BB) {
+      if (I.isTerminator() || isa<AllocaInst>(I) || isa<PHINode>(I))
+        continue;
+
+      bool UsedOutside = false;
+      for (User *U : I.users()) {
+        if (auto *UI = dyn_cast<Instruction>(U)) {
+          if (UI->getParent() != &BB) {
+            UsedOutside = true;
+            break;
+          }
+        }
+      }
+
+      if (UsedOutside) {
+        ToDemote.push_back(&I);
+      }
+    }
+  }
+
+  for (Instruction *I : ToDemote) {
+    AllocaInst *Alloca = AllocaBuilder.CreateAlloca(I->getType(), nullptr,
+                                                    I->getName() + ".alloca");
+
+    IRBuilder<> StoreBuilder(I);
+    StoreBuilder.SetInsertPoint(I->getParent(), ++I->getIterator());
+    StoreBuilder.CreateStore(I, Alloca);
+
+    std::vector<Use *> UsesToReplace;
+    for (Use &U : I->uses()) {
+      UsesToReplace.push_back(&U);
+    }
+
+    for (Use *U : UsesToReplace) {
+      if (auto *UserInst = dyn_cast<Instruction>(U->getUser())) {
+        if (auto *SI = dyn_cast<StoreInst>(UserInst)) {
+          if (SI->getPointerOperand() == Alloca)
+            continue;
+        }
+
+        IRBuilder<> LoadBuilder(UserInst);
+        LoadInst *Load = LoadBuilder.CreateLoad(I->getType(), Alloca,
+                                                I->getName() + ".reload");
+        U->set(Load);
+      }
+    }
+  }
+}
+
+static Value *buildNextStateForTerm(IRBuilder<> &B, Instruction *T,
+                                    DenseMap<BasicBlock *, unsigned> &Id) {
+  if (auto *Br = dyn_cast<BranchInst>(T)) {
+    if (Br->isUnconditional()) {
+      auto It = Id.find(Br->getSuccessor(0));
+      if (It != Id.end()) {
+        return B.getInt32(It->second);
+      }
+      return nullptr;
+    }
+
+    auto It1 = Id.find(Br->getSuccessor(0));
+    auto It2 = Id.find(Br->getSuccessor(1));
+    if (It1 != Id.end() && It2 != Id.end()) {
+      Value *TState = B.getInt32(It1->second);
+      Value *FState = B.getInt32(It2->second);
+      return B.CreateSelect(Br->getCondition(), TState, FState, "cff.next");
+    }
+    return nullptr;
+  }
+
+  if (auto *Sw = dyn_cast<SwitchInst>(T)) {
+    auto DefaultIt = Id.find(Sw->getDefaultDest());
+    if (DefaultIt == Id.end())
+      return nullptr;
+
+    Value *Cond = Sw->getCondition();
+    Value *NS = B.getInt32(DefaultIt->second);
+
+    for (auto &C : Sw->cases()) {
+      auto CaseIt = Id.find(C.getCaseSuccessor());
+      if (CaseIt != Id.end()) {
+        Value *Is = B.CreateICmpEQ(Cond, C.getCaseValue());
+        Value *S = B.getInt32(CaseIt->second);
+        NS = B.CreateSelect(Is, S, NS, "cff.case.select");
+      }
+    }
+    return NS;
+  }
+
+  return nullptr;
+}
+
+static bool isSupportedTerminator(Instruction *T) {
+  return isa<BranchInst>(T) || isa<SwitchInst>(T) || isa<ReturnInst>(T) ||
+         isa<UnreachableInst>(T);
+}
+
+static bool hasUnsupportedControlFlow(Function &F) {
+  for (BasicBlock &BB : F) {
+    if (BB.isEHPad() || BB.isLandingPad()) {
+      errs() << "CFF: Skipping function '" << F.getName()
+             << "' - contains exception handling\n";
+      return true;
+    }
+
+    Instruction *T = BB.getTerminator();
+    if (!isSupportedTerminator(T)) {
+      if (isa<IndirectBrInst>(T)) {
+        errs() << "CFF: Skipping function '" << F.getName()
+               << "' - contains indirect branch\n";
+      } else if (isa<CallBrInst>(T)) {
+        errs() << "CFF: Skipping function '" << F.getName()
+               << "' - contains callbr instruction\n";
+      } else if (isa<InvokeInst>(T)) {
+        errs() << "CFF: Skipping function '" << F.getName()
+               << "' - contains invoke instruction\n";
+      } else {
+        errs() << "CFF: Skipping function '" << F.getName()
+               << "' - contains unsupported terminator: " << T->getOpcodeName()
+               << "\n";
+      }
+      return true;
+    }
+  }
+  return false;
+}
+
 struct ControlFlowFlatteningPass
     : public PassInfoMixin<ControlFlowFlatteningPass> {
+
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM) {
     bool Changed = false;
     unsigned int flattenedFunctions = 0;
     unsigned int flattenedBlocks = 0;
+    unsigned int skippedFunctions = 0;
 
     for (Function &F : M) {
-      // Skip declarations, intrinsics, and simple functions
-      if (F.isDeclaration() || F.isIntrinsic() || F.size() < 3)
+      if (F.isDeclaration() || F.isIntrinsic())
+        continue;
+      if (F.size() < 2)
         continue;
 
-      // Skip functions with exception handling or other complex features
-      bool hasComplexFeatures = false;
-      for (BasicBlock &BB : F) {
-        if (BB.isEHPad() || BB.isLandingPad()) {
-          hasComplexFeatures = true;
-          break;
-        }
+      if (hasUnsupportedControlFlow(F)) {
+        skippedFunctions++;
+        continue;
       }
-      if (hasComplexFeatures)
-        continue;
 
+      unsigned blocksBefore = F.size();
       if (flattenFunction(F)) {
         Changed = true;
         flattenedFunctions++;
-        flattenedBlocks += F.size() - 2; // Exclude entry and switch blocks
+        flattenedBlocks += blocksBefore - 1;
+
+        if (verifyFunction(F, &errs())) {
+          errs() << "CFF ERROR: Function verification failed for "
+                 << F.getName() << "\n";
+        }
       }
     }
 
-    // Output metrics to stderr instead of stdout
-    if (Changed) {
+    if (Changed || skippedFunctions > 0) {
       errs() << "CFF_METRICS:{\"flattenedFunctions\":" << flattenedFunctions
-             << ",\"flattenedBlocks\":" << flattenedBlocks << "}\n";
-      return PreservedAnalyses::none();
+             << ",\"flattenedBlocks\":" << flattenedBlocks
+             << ",\"skippedFunctions\":" << skippedFunctions << "}\n";
+      if (Changed)
+        return PreservedAnalyses::none();
     }
     return PreservedAnalyses::all();
   }
 
 private:
   bool flattenFunction(Function &F) {
-    // Collect all basic blocks except entry
-    std::vector<BasicBlock *> blocks;
-    BasicBlock *entryBlock = &F.getEntryBlock();
+    if (F.isDeclaration() || F.isIntrinsic() || F.size() < 2)
+      return false;
 
-    for (BasicBlock &BB : F) {
-      if (&BB != entryBlock) {
-        blocks.push_back(&BB);
-      }
-    }
-
-    if (blocks.size() < 2)
+    if (hasUnsupportedControlFlow(F))
       return false;
 
     LLVMContext &Ctx = F.getContext();
-    IRBuilder<> Builder(Ctx);
 
-    // Create dispatch basic block and state variable
-    BasicBlock *dispatchBlock =
-        BasicBlock::Create(Ctx, "dispatch", &F, blocks[0]);
+    demoteValuesToMemory(F);
 
-    // Create state variable at function entry
-    Builder.SetInsertPoint(entryBlock, entryBlock->getFirstInsertionPt());
-    AllocaInst *stateVar =
-        Builder.CreateAlloca(Type::getInt32Ty(Ctx), nullptr, "state");
+    BasicBlock *Entry = &F.getEntryBlock();
 
-    // Insert state variable initialization at entry
-    Builder.SetInsertPoint(entryBlock->getTerminator());
-    Builder.CreateStore(Builder.getInt32(0), stateVar);
-
-    // Replace entry block terminator with branch to dispatch
-    entryBlock->getTerminator()->eraseFromParent();
-    Builder.SetInsertPoint(entryBlock);
-    Builder.CreateBr(dispatchBlock);
-
-    // Create switch instruction in dispatch block
-    Builder.SetInsertPoint(dispatchBlock);
-    Value *stateVal =
-        Builder.CreateLoad(Type::getInt32Ty(Ctx), stateVar, "state.val");
-
-    // Create default case (should never be reached in normal flow)
-    BasicBlock *defaultBlock = BasicBlock::Create(Ctx, "default", &F);
-
-    // Create switch instruction while still in dispatch block
-    SwitchInst *switchInst =
-        Builder.CreateSwitch(stateVal, defaultBlock, blocks.size());
-
-    // Now set up the default block
-    Builder.SetInsertPoint(defaultBlock);
-    Builder.CreateUnreachable();
-
-    // Assign random state values to each block
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> dist(1000, 9999);
-    std::map<BasicBlock *, int> blockStates;
-
-    // First pass: assign state IDs to all blocks
-    for (BasicBlock *BB : blocks) {
-      int stateId = dist(gen);
-      blockStates[BB] = stateId;
-      switchInst->addCase(Builder.getInt32(stateId), BB);
+    SmallVector<BasicBlock *, 32> OriginalBlocks;
+    for (BasicBlock &BB : F) {
+      OriginalBlocks.push_back(&BB);
     }
 
-    // Second pass: update terminators
-    for (BasicBlock *BB : blocks) {
-      Instruction *term = BB->getTerminator();
+    DenseMap<BasicBlock *, unsigned> BlockId;
+    SmallVector<BasicBlock *, 32> FlattenTargets;
+    unsigned NextId = 1;
 
-      if (!term)
+    for (BasicBlock *BB : OriginalBlocks) {
+      if (BB == Entry)
         continue;
 
-      if (ReturnInst *ret = dyn_cast<ReturnInst>(term)) {
-        // Return instructions remain unchanged
+      Instruction *Term = BB->getTerminator();
+      if ((isa<ReturnInst>(Term) || isa<UnreachableInst>(Term)) &&
+          BB->size() == 1) {
         continue;
-      } else if (BranchInst *br = dyn_cast<BranchInst>(term)) {
-        Builder.SetInsertPoint(term);
+      }
 
-        if (br->isUnconditional()) {
-          BasicBlock *successor = br->getSuccessor(0);
-          if (blockStates.find(successor) != blockStates.end()) {
-            Builder.CreateStore(Builder.getInt32(blockStates[successor]),
-                                stateVar);
-            Builder.CreateBr(dispatchBlock);
-            term->eraseFromParent();
-          }
-        } else {
-          // Handle conditional branches
-          BasicBlock *trueBB = br->getSuccessor(0);
-          BasicBlock *falseBB = br->getSuccessor(1);
-          Value *condition = br->getCondition();
+      BlockId[BB] = NextId++;
+      FlattenTargets.push_back(BB);
+    }
 
-          // Create intermediate blocks for state updates
-          BasicBlock *trueStateBlock =
-              BasicBlock::Create(Ctx, "true.state", &F);
-          BasicBlock *falseStateBlock =
-              BasicBlock::Create(Ctx, "false.state", &F);
+    if (FlattenTargets.empty())
+      return false;
 
-          // Replace the original branch with a branch to state blocks
-          Builder.CreateCondBr(condition, trueStateBlock, falseStateBlock);
+    IRBuilder<> EntryBuilder(Ctx);
+    EntryBuilder.SetInsertPoint(Entry, Entry->getFirstInsertionPt());
+    AllocaInst *StateVar =
+        EntryBuilder.CreateAlloca(Type::getInt32Ty(Ctx), nullptr, "cff.state");
 
-          // Set up true state block
-          Builder.SetInsertPoint(trueStateBlock);
-          if (blockStates.find(trueBB) != blockStates.end()) {
-            Builder.CreateStore(Builder.getInt32(blockStates[trueBB]),
-                                stateVar);
-          } else if (trueBB == entryBlock) {
-            Builder.CreateStore(Builder.getInt32(0), stateVar);
-          }
-          Builder.CreateBr(dispatchBlock);
+    BasicBlock *Dispatcher = BasicBlock::Create(Ctx, "cff.dispatch", &F);
+    BasicBlock *DefaultBlock = BasicBlock::Create(Ctx, "cff.default", &F);
+    IRBuilder<> DefaultBuilder(DefaultBlock);
+    DefaultBuilder.CreateUnreachable();
 
-          // Set up false state block
-          Builder.SetInsertPoint(falseStateBlock);
-          if (blockStates.find(falseBB) != blockStates.end()) {
-            Builder.CreateStore(Builder.getInt32(blockStates[falseBB]),
-                                stateVar);
-          } else if (falseBB == entryBlock) {
-            Builder.CreateStore(Builder.getInt32(0), stateVar);
-          }
-          Builder.CreateBr(dispatchBlock);
-
-          // Erase the original branch
-          term->eraseFromParent();
-        }
-      } else if (SwitchInst *sw = dyn_cast<SwitchInst>(term)) {
-        // Handle switch instructions
-        Builder.SetInsertPoint(term);
-
-        // Create a new switch for dispatching
-        SwitchInst *newSwitch = Builder.CreateSwitch(
-            sw->getCondition(), nullptr, sw->getNumCases());
-
-        // For each case, create an intermediate block
-        for (auto &Case : sw->cases()) {
-          BasicBlock *caseTarget = Case.getCaseSuccessor();
-          BasicBlock *caseStateBlock = BasicBlock::Create(
-              Ctx,
-              "case.state." +
-                  std::to_string(Case.getCaseValue()->getZExtValue()),
-              &F);
-
-          newSwitch->addCase(Case.getCaseValue(), caseStateBlock);
-
-          Builder.SetInsertPoint(caseStateBlock);
-          if (blockStates.find(caseTarget) != blockStates.end()) {
-            Builder.CreateStore(Builder.getInt32(blockStates[caseTarget]),
-                                stateVar);
-          }
-          Builder.CreateBr(dispatchBlock);
-        }
-
-        // Handle default case
-        BasicBlock *defaultTarget = sw->getDefaultDest();
-        BasicBlock *defaultStateBlock =
-            BasicBlock::Create(Ctx, "default.state", &F);
-        newSwitch->setDefaultDest(defaultStateBlock);
-
-        Builder.SetInsertPoint(defaultStateBlock);
-        if (blockStates.find(defaultTarget) != blockStates.end()) {
-          Builder.CreateStore(Builder.getInt32(blockStates[defaultTarget]),
-                              stateVar);
-        }
-        Builder.CreateBr(dispatchBlock);
-
-        // Erase the original switch
-        term->eraseFromParent();
+    Instruction *EntryTerm = Entry->getTerminator();
+    Value *InitialState = nullptr;
+    {
+      IRBuilder<> InitBuilder(EntryTerm);
+      InitialState = buildNextStateForTerm(InitBuilder, EntryTerm, BlockId);
+      if (InitialState) {
+        InitBuilder.CreateStore(InitialState, StateVar);
+      } else {
+        return false;
       }
     }
 
+    EntryTerm->eraseFromParent();
+    IRBuilder<> NewEntryBuilder(Entry);
+    NewEntryBuilder.CreateBr(Dispatcher);
+
+    IRBuilder<> DispatchBuilder(Dispatcher);
+    Value *CurrentState =
+        DispatchBuilder.CreateLoad(Type::getInt32Ty(Ctx), StateVar, "cff.cur");
+    SwitchInst *DispatchSwitch = DispatchBuilder.CreateSwitch(
+        CurrentState, DefaultBlock, FlattenTargets.size());
+
+    for (BasicBlock *BB : FlattenTargets) {
+      DispatchSwitch->addCase(DispatchBuilder.getInt32(BlockId[BB]), BB);
+    }
+
+    for (BasicBlock *BB : FlattenTargets) {
+      Instruction *Term = BB->getTerminator();
+
+      if (isa<ReturnInst>(Term) || isa<UnreachableInst>(Term))
+        continue;
+
+      IRBuilder<> TermBuilder(Term);
+      Value *NextState = buildNextStateForTerm(TermBuilder, Term, BlockId);
+
+      if (NextState) {
+        TermBuilder.CreateStore(NextState, StateVar);
+        TermBuilder.CreateBr(Dispatcher);
+        Term->eraseFromParent();
+      } else {
+        // This terminator goes to a non-flattened block (like a return block)
+        // Leave it as-is
+      }
+    }
+
+    removeUnreachableBlocks(F);
     return true;
   }
 };
+
+} // namespace
 
 extern "C" LLVM_ATTRIBUTE_WEAK PassPluginLibraryInfo llvmGetPassPluginInfo() {
   return {LLVM_PLUGIN_API_VERSION, "ChakravyuhaControlFlowFlatteningPassPlugin",

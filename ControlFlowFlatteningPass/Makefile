@@ -1,59 +1,61 @@
-# Makefile for: compile -> LLVM IR -> obfuscate with pass -> link -> run
+CC = clang
+CXX = clang++
+OPT = opt
+LLVM_CONFIG = llvm-config
 
-# Tools (override on command line, e.g. "make CLANG=clang")
-CLANG    ?= clang-20
-OPT      ?= opt-20
-PASS_SO  ?= ./build/lib/ChakravyuhaControlFlowFlatteningPass.so
-STRINGS  ?= strings
+BUILD_DIR = build
+TEST_DIR = tests
+PLUGIN = $(BUILD_DIR)/lib/ChakravyuhaControlFlowFlatteningPass.so
 
-# Filenames
-SRC      := test_program.c
-LL       := $(SRC:.c=.ll)
-OBF_LL   := obfuscated.ll
-BIN      := obfuscated_program
+# Test targets
+.PHONY: all test clean run-tests build-plugin
 
-# Flags
-# produce LLVM IR from C (no optimizations, emit LLVM IR text)
-CLANG_FLAGS := -O0 -S -emit-llvm
+all: build-plugin test
 
-# opt pass flags: use -load-pass-plugin (modern LLVM) and -passes=...
-OPT_PASSES := -load-pass-plugin $(PASS_SO) -passes=chakravyuha-control-flow-flatten
+build-plugin:
+	@echo "Building the pass plugin..."
+	@mkdir -p $(BUILD_DIR)
+	@cd $(BUILD_DIR) && cmake .. && make
 
-.PHONY: all compile obfuscate link run strings clean
+test: build-plugin
+	@echo "Running tests..."
+	@bash run_tests.sh
 
-all: $(BIN)
+# Individual test targets
+test-simple: build-plugin
+	@echo "Testing simple if..."
+	@clang -O0 -S -emit-llvm $(TEST_DIR)/test_simple_if.c -o $(BUILD_DIR)/simple.ll
+	@opt -load-pass-plugin=$(PLUGIN) -passes=chakravyuha-control-flow-flatten -S $(BUILD_DIR)/simple.ll -o $(BUILD_DIR)/simple_flat.ll
+	@echo "Original:"
+	@clang $(BUILD_DIR)/simple.ll -o $(BUILD_DIR)/simple_orig && $(BUILD_DIR)/simple_orig
+	@echo "Flattened:"
+	@clang $(BUILD_DIR)/simple_flat.ll -o $(BUILD_DIR)/simple_flat && $(BUILD_DIR)/simple_flat
 
-# Step 1: compile C -> LLVM IR (.ll)
-# Recreates .ll whenever .c changes
-$(LL): $(SRC)
-	@echo "[1/4] clang -> LLVM IR: $< -> $@"
-	$(CLANG) $(CLANG_FLAGS) $< -o $@
-
-# Step 2: run the custom opt pass to produce obfuscated.ll
-$(OBF_LL): $(LL) $(PASS_SO)
-	@echo "[2/4] obfuscating with plugin: $(PASS_SO)"
-	$(OPT) $(OPT_PASSES) < $(LL) > $(OBF_LL)
-
-# Step 3: compile/link obfuscated.ll -> binary
-$(BIN): $(OBF_LL)
-	@echo "[3/4] compiling LLVM IR -> binary: $< -> $@"
-	$(CLANG) $(OBF_LL) -o $(BIN)
-
-# convenience phony targets
-compile: $(LL)
-
-obfuscate: $(OBF_LL)
-
-link: $(BIN)
-
-run: $(BIN)
-	@echo "[4/4] running: ./$<"
-	./$(BIN)
-
-strings: $(BIN)
-	@echo "strings output for $(BIN):"
-	$(STRINGS) $(BIN)
+# Visualization target
+visualize: build-plugin
+	@echo "Generating CFG visualizations..."
+	@for test in $(TEST_DIR)/test_*.c; do \
+		name=$$(basename $$test .c); \
+		echo "Processing $$name..."; \
+		clang -O0 -S -emit-llvm $$test -o $(BUILD_DIR)/$$name.ll 2>/dev/null; \
+		opt -load-pass-plugin=$(PLUGIN) -passes=chakravyuha-control-flow-flatten -S $(BUILD_DIR)/$$name.ll -o $(BUILD_DIR)/$${name}_flat.ll 2>/dev/null; \
+		opt -dot-cfg $(BUILD_DIR)/$$name.ll -disable-output 2>/dev/null; \
+		opt -dot-cfg $(BUILD_DIR)/$${name}_flat.ll -disable-output 2>/dev/null; \
+	done
+	@echo "CFG dot files generated. Use 'dot -Tpng file.dot -o file.png' to convert."
 
 clean:
-	@echo "cleaning generated files..."
-	-rm -f $(LL) $(OBF_LL) $(BIN)
+	@echo "Cleaning..."
+	@rm -rf $(BUILD_DIR)
+	@rm -f *.dot
+	@rm -f test_report.txt
+
+help:
+	@echo "Available targets:"
+	@echo "  make all          - Build plugin and run all tests"
+	@echo "  make build-plugin - Build the pass plugin only"
+	@echo "  make test         - Run all tests"
+	@echo "  make test-simple  - Run simple if test only"
+	@echo "  make visualize    - Generate CFG visualizations"
+	@echo "  make clean        - Clean build artifacts"
+	@echo "  make help         - Show this help message"
