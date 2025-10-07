@@ -110,8 +110,8 @@ define run_test
 		done; \
 		echo "$(CYAN)  [5/7] Compiling binaries...$(NC)"; \
 		$(CC) $(RESULTS_DIR)/ll_files/$(1)_$(2).ll \
-			-o $(RESULTS_DIR)/binaries/$(1)_$(2) 2>/dev/null; \
-		$(CC) $(TEST_DIR)/$(1).c -o $(RESULTS_DIR)/binaries/$(1)_original 2>/dev/null; \
+			-o $(RESULTS_DIR)/binaries/$(1)_$(2); \
+		$(CC) $(TEST_DIR)/$(1).c -o $(RESULTS_DIR)/binaries/$(1)_original; \
 		echo "$(CYAN)  [6/7] Running and comparing outputs...$(NC)"; \
 		$(RESULTS_DIR)/binaries/$(1)_original > $(RESULTS_DIR)/$(1)_original.out 2>&1; \
 		$(RESULTS_DIR)/binaries/$(1)_$(2) > $(RESULTS_DIR)/$(1)_$(2).out 2>&1; \

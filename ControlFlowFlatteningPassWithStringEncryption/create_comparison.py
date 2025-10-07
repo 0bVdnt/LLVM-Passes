@@ -3,16 +3,24 @@ from pathlib import Path
 
 
 def format_bytes(size):
-    """Formats a size in bytes to a human-readable string with precision."""
-    if size is None:
+    """Formats a size in bytes to a human-readable string."""
+    if size is None or size < 0:
         return "N/A"
+    if size == 0:
+        return "0 B"
+
     power = 1024
     n = 0
-    power_labels = {0: "", 1: "K", 2: "M", 3: "G", 4: "T"}
+    power_labels = {0: "B", 1: "KB", 2: "MB", 3: "GB", 4: "TB"}
+
     while size >= power and n < len(power_labels) - 1:
         size /= power
         n += 1
-    return f"{size:.2f} {power_labels[n]}B"
+
+    if n == 0:
+        return f"{int(size)} {power_labels[n]}"
+    else:
+        return f"{size:.2f} {power_labels[n]}"
 
 
 def create_comparison_html():
@@ -85,24 +93,27 @@ def create_comparison_html():
                     with open(report_to_load, "r") as f:
                         metrics[test_name] = json.load(f)
 
-                    # Now that we have a valid report, find the binary sizes
+                    # Get binary sizes safely
+                    orig_size, obf_size = None, None
                     original_bin = binaries_dir / f"{test_name}_original"
                     obfuscated_bin = binaries_dir / f"{test_name}_{report_type}"
 
-                    if original_bin.exists() and obfuscated_bin.exists():
+                    if original_bin.exists():
                         orig_size = original_bin.stat().st_size
-                        obf_size = obfuscated_bin.stat().st_size
-                        change_pct = (
-                            ((obf_size - orig_size) / orig_size * 100)
-                            if orig_size > 0
-                            else 0
-                        )
 
-                        metrics[test_name]["binary_metrics"] = {
-                            "original_size": format_bytes(orig_size),
-                            "obfuscated_size": format_bytes(obf_size),
-                            "change_pct": f"{change_pct:+.2f}%",
-                        }
+                    if obfuscated_bin.exists():
+                        obf_size = obfuscated_bin.stat().st_size
+
+                    change_str = "N/A"
+                    if orig_size is not None and obf_size is not None and orig_size > 0:
+                        change_pct = (obf_size - orig_size) / orig_size * 100
+                        change_str = f"{change_pct:+.2f}%"
+
+                    metrics[test_name]["binary_metrics"] = {
+                        "original_size": format_bytes(orig_size),
+                        "obfuscated_size": format_bytes(obf_size),
+                        "change_pct": change_str,
+                    }
 
                 except (json.JSONDecodeError, FileNotFoundError):
                     metrics[test_name] = {}
@@ -172,12 +183,11 @@ def create_comparison_html():
                 .metric-card .label { color: #6c757d; margin-top: 8px; font-size: 0.9em; }
                 .metric-card .sub-label { color: #999; font-size: 0.8em; }
                 
-                /* Custom style for the 'Passes Run' card to handle long text */
                 .metric-card.pass-list-card .value {
-                    font-size: 1.1em;      /* Smaller font size */
-                    line-height: 1.5;      /* Better line spacing */
-                    word-break: break-all; /* Force long strings to break and wrap */
-                    margin-top: 10px;      /* Align with other cards */
+                    font-size: 1.1em;
+                    line-height: 1.5;
+                    word-break: break-all;
+                    margin-top: 10px;
                 }
 
                 .comparison-container { padding: 30px; }
