@@ -1,0 +1,29 @@
+{
+  "inputFile": "tests/test_loops.c",
+  "outputFile": "obfuscated.ll",
+  "timestamp": "2025-10-07T04:41:13Z",
+  "inputParameters": {
+    "obfuscationLevel": "medium",
+    "targetPlatform": "linux",
+    "enableStringEncryption": true,
+    "enableControlFlowFlattening": true
+  },
+  "outputAttributes": {
+    "originalIRStringDataSize": "59 bytes",
+    "obfuscatedIRStringDataSize": "59 bytes",
+    "stringDataSizeChange": "0.00%"
+  },
+  "obfuscationMetrics": {
+    "cyclesCompleted": 1,
+    "passesRun": ["StringEncrypt", "ControlFlowFlattening"],
+    "stringEncryption": {
+      "count": 3,
+      "method": "XOR with dynamic per-run key"
+    },
+    "controlFlowFlattening": {
+      "flattenedFunctions": 4,
+      "flattenedBlocks": 13,
+      "skippedFunctions": 0
+    }
+  }
+}

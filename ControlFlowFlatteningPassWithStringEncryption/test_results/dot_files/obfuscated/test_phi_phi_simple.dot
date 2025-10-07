@@ -1,0 +1,17 @@
+digraph "CFG for 'phi_simple' function" {
+	label="CFG for 'phi_simple' function";
+
+	Node0x588caf19e8c0 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#dc5d4a70" fontname="Courier",label="{2:\l|  %cff.state = alloca i32, align 4\l  %3 = alloca i32, align 4\l  %4 = alloca i32, align 4\l  %5 = alloca i32, align 4\l  store i32 %0, ptr %3, align 4\l  store i32 %1, ptr %4, align 4\l  %6 = load i32, ptr %3, align 4\l  %7 = load i32, ptr %4, align 4\l  %8 = icmp sgt i32 %6, %7\l  %cff.init = select i1 %8, i32 1, i32 2\l  store i32 %cff.init, ptr %cff.state, align 4\l  br label %cff.dispatch\l}"];
+	Node0x588caf19e8c0 -> Node0x588caf1b5530;
+	Node0x588caf1a1520 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#be242e70" fontname="Courier",label="{9:\l|  %10 = load i32, ptr %3, align 4\l  %11 = load i32, ptr %4, align 4\l  %12 = sub nsw i32 %10, %11\l  store i32 %12, ptr %5, align 4\l  store i32 3, ptr %cff.state, align 4\l  br label %cff.dispatch\l}"];
+	Node0x588caf1a1520 -> Node0x588caf1b5530;
+	Node0x588caf1a1580 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#be242e70" fontname="Courier",label="{13:\l|  %14 = load i32, ptr %4, align 4\l  %15 = load i32, ptr %3, align 4\l  %16 = sub nsw i32 %14, %15\l  store i32 %16, ptr %5, align 4\l  store i32 3, ptr %cff.state, align 4\l  br label %cff.dispatch\l}"];
+	Node0x588caf1a1580 -> Node0x588caf1b5530;
+	Node0x588caf1a1870 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#dc5d4a70" fontname="Courier",label="{17:\l|  %18 = load i32, ptr %5, align 4\l  %19 = mul nsw i32 %18, 2\l  ret i32 %19\l}"];
+	Node0x588caf1b5530 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870" fontname="Courier",label="{cff.dispatch:\l|  %cff.cur = load i32, ptr %cff.state, align 4\l  switch i32 %cff.cur, label %cff.default [\l    i32 1, label %9\l    i32 2, label %13\l    i32 3, label %17\l  ]\l|{<s0>def|<s1>1|<s2>2|<s3>3}}"];
+	Node0x588caf1b5530:s0 -> Node0x588caf1b5590;
+	Node0x588caf1b5530:s1 -> Node0x588caf1a1520;
+	Node0x588caf1b5530:s2 -> Node0x588caf1a1580;
+	Node0x588caf1b5530:s3 -> Node0x588caf1a1870;
+	Node0x588caf1b5590 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#c7d7f070" fontname="Courier",label="{cff.default:\l|  unreachable\l}"];
+}

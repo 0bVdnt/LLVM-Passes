@@ -1,0 +1,5 @@
+Complex control flow(5,6,11): 11
+Complex control flow(0,4,5): 35
+Multiple returns(10,5,7): 6
+Multiple returns(-1,5,7): -1
+Short circuit(10,20,30): 60

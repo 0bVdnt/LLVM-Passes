@@ -1,0 +1,21 @@
+digraph "CFG for 'test_function' function" {
+	label="CFG for 'test_function' function";
+
+	Node0x611a8258d2c0 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#d0473d70" fontname="Courier",label="{1:\l|  %2 = alloca i32, align 4\l  %3 = alloca i32, align 4\l  %4 = alloca i32, align 4\l  store i32 %0, ptr %2, align 4\l  store i32 0, ptr %3, align 4\l  %5 = load i32, ptr %2, align 4\l  %6 = icmp sgt i32 %5, 10\l  br i1 %6, label %7, label %21\l|{<s0>T|<s1>F}}"];
+	Node0x611a8258d2c0:s0 -> Node0x611a8258d3d0;
+	Node0x611a8258d2c0:s1 -> Node0x611a82590820;
+	Node0x611a8258d3d0 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#d6524470" fontname="Courier",label="{7:\l|  store i32 0, ptr %4, align 4\l  br label %8\l}"];
+	Node0x611a8258d3d0 -> Node0x611a82590a10;
+	Node0x611a82590a10 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870" fontname="Courier",label="{8:\l|  %9 = load i32, ptr %4, align 4\l  %10 = load i32, ptr %2, align 4\l  %11 = icmp slt i32 %9, %10\l  br i1 %11, label %12, label %20\l|{<s0>T|<s1>F}}"];
+	Node0x611a82590a10:s0 -> Node0x611a82590be0;
+	Node0x611a82590a10:s1 -> Node0x611a82590c40;
+	Node0x611a82590be0 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870" fontname="Courier",label="{12:\l|  %13 = load i32, ptr %4, align 4\l  %14 = load i32, ptr %3, align 4\l  %15 = add nsw i32 %14, %13\l  store i32 %15, ptr %3, align 4\l  %16 = call i32 (ptr, ...) @printf(ptr noundef @.str, i32 noundef %15)\l  br label %17\l}"];
+	Node0x611a82590be0 -> Node0x611a82591120;
+	Node0x611a82591120 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870" fontname="Courier",label="{17:\l|  %18 = load i32, ptr %4, align 4\l  %19 = add nsw i32 %18, 1\l  store i32 %19, ptr %4, align 4\l  br label %8, !llvm.loop !6\l}"];
+	Node0x611a82591120 -> Node0x611a82590a10;
+	Node0x611a82590c40 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#d6524470" fontname="Courier",label="{20:\l|  br label %22\l}"];
+	Node0x611a82590c40 -> Node0x611a82591e90;
+	Node0x611a82590820 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#d6524470" fontname="Courier",label="{21:\l|  store i32 -1, ptr %3, align 4\l  br label %22\l}"];
+	Node0x611a82590820 -> Node0x611a82591e90;
+	Node0x611a82591e90 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#d0473d70" fontname="Courier",label="{22:\l|  %23 = load i32, ptr %3, align 4\l  ret i32 %23\l}"];
+}

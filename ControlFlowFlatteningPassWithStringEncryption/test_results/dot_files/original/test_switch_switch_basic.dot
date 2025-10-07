@@ -1,0 +1,22 @@
+digraph "CFG for 'switch_basic' function" {
+	label="CFG for 'switch_basic' function";
+
+	Node0x620803282270 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870" fontname="Courier",label="{1:\l|  %2 = alloca i32, align 4\l  %3 = alloca i32, align 4\l  store i32 %0, ptr %2, align 4\l  store i32 0, ptr %3, align 4\l  %4 = load i32, ptr %2, align 4\l  switch i32 %4, label %13 [\l    i32 1, label %5\l    i32 2, label %7\l    i32 3, label %9\l    i32 4, label %11\l    i32 5, label %11\l  ]\l|{<s0>def|<s1>1|<s2>2|<s3>3|<s4>4|<s5>5}}"];
+	Node0x620803282270:s0 -> Node0x6208032823a0;
+	Node0x620803282270:s1 -> Node0x6208032e8af0;
+	Node0x620803282270:s2 -> Node0x6208032e91d0;
+	Node0x620803282270:s3 -> Node0x6208032e92a0;
+	Node0x620803282270:s4 -> Node0x6208032e9370;
+	Node0x620803282270:s5 -> Node0x6208032e9370;
+	Node0x6208032e8af0 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#ca3b3770" fontname="Courier",label="{5:\l|  store i32 100, ptr %3, align 4\l  %6 = call i32 (ptr, ...) @printf(ptr noundef @.str)\l  br label %15\l}"];
+	Node0x6208032e8af0 -> Node0x6208032e98d0;
+	Node0x6208032e91d0 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#ca3b3770" fontname="Courier",label="{7:\l|  store i32 200, ptr %3, align 4\l  %8 = call i32 (ptr, ...) @printf(ptr noundef @.str.1)\l  br label %15\l}"];
+	Node0x6208032e91d0 -> Node0x6208032e98d0;
+	Node0x6208032e92a0 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#ca3b3770" fontname="Courier",label="{9:\l|  store i32 300, ptr %3, align 4\l  %10 = call i32 (ptr, ...) @printf(ptr noundef @.str.2)\l  br label %15\l}"];
+	Node0x6208032e92a0 -> Node0x6208032e98d0;
+	Node0x6208032e9370 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#c32e3170" fontname="Courier",label="{11:\l|  store i32 500, ptr %3, align 4\l  %12 = call i32 (ptr, ...) @printf(ptr noundef @.str.3)\l  br label %15\l}"];
+	Node0x6208032e9370 -> Node0x6208032e98d0;
+	Node0x6208032823a0 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#ca3b3770" fontname="Courier",label="{13:\l|  store i32 -1, ptr %3, align 4\l  %14 = call i32 (ptr, ...) @printf(ptr noundef @.str.4)\l  br label %15\l}"];
+	Node0x6208032823a0 -> Node0x6208032e98d0;
+	Node0x6208032e98d0 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870" fontname="Courier",label="{15:\l|  %16 = load i32, ptr %3, align 4\l  ret i32 %16\l}"];
+}

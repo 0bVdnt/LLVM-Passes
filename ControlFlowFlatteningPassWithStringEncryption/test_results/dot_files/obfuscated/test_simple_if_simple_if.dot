@@ -1,0 +1,17 @@
+digraph "CFG for 'simple_if' function" {
+	label="CFG for 'simple_if' function";
+
+	Node0x5856dd66b430 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#dc5d4a70" fontname="Courier",label="{1:\l|  %cff.state = alloca i32, align 4\l  %2 = alloca i32, align 4\l  %3 = alloca i32, align 4\l  store i32 %0, ptr %2, align 4\l  store i32 0, ptr %3, align 4\l  %4 = load i32, ptr %2, align 4\l  %5 = icmp sgt i32 %4, 10\l  %cff.init = select i1 %5, i32 1, i32 2\l  store i32 %cff.init, ptr %cff.state, align 4\l  br label %cff.dispatch\l}"];
+	Node0x5856dd66b430 -> Node0x5856dd67dc20;
+	Node0x5856dd66b560 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#be242e70" fontname="Courier",label="{6:\l|  %7 = load i32, ptr %2, align 4\l  %8 = mul nsw i32 %7, 2\l  store i32 %8, ptr %3, align 4\l  store i32 3, ptr %cff.state, align 4\l  br label %cff.dispatch\l}"];
+	Node0x5856dd66b560 -> Node0x5856dd67dc20;
+	Node0x5856dd66e950 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#be242e70" fontname="Courier",label="{9:\l|  %10 = load i32, ptr %2, align 4\l  %11 = add nsw i32 %10, 5\l  store i32 %11, ptr %3, align 4\l  store i32 3, ptr %cff.state, align 4\l  br label %cff.dispatch\l}"];
+	Node0x5856dd66e950 -> Node0x5856dd67dc20;
+	Node0x5856dd66ebf0 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#dc5d4a70" fontname="Courier",label="{12:\l|  %13 = load i32, ptr %3, align 4\l  ret i32 %13\l}"];
+	Node0x5856dd67dc20 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870" fontname="Courier",label="{cff.dispatch:\l|  %cff.cur = load i32, ptr %cff.state, align 4\l  switch i32 %cff.cur, label %cff.default [\l    i32 1, label %6\l    i32 2, label %9\l    i32 3, label %12\l  ]\l|{<s0>def|<s1>1|<s2>2|<s3>3}}"];
+	Node0x5856dd67dc20:s0 -> Node0x5856dd67dcb0;
+	Node0x5856dd67dc20:s1 -> Node0x5856dd66b560;
+	Node0x5856dd67dc20:s2 -> Node0x5856dd66e950;
+	Node0x5856dd67dc20:s3 -> Node0x5856dd66ebf0;
+	Node0x5856dd67dcb0 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#c7d7f070" fontname="Courier",label="{cff.default:\l|  unreachable\l}"];
+}

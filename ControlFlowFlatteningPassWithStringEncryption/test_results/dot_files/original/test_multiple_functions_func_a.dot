@@ -1,0 +1,12 @@
+digraph "CFG for 'func_a' function" {
+	label="CFG for 'func_a' function";
+
+	Node0x64b3b5ad62c0 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870" fontname="Courier",label="{1:\l|  %2 = alloca i32, align 4\l  %3 = alloca i32, align 4\l  store i32 %0, ptr %3, align 4\l  %4 = load i32, ptr %3, align 4\l  %5 = icmp sgt i32 %4, 0\l  br i1 %5, label %6, label %9\l|{<s0>T|<s1>F}}"];
+	Node0x64b3b5ad62c0:s0 -> Node0x64b3b5ad63f0;
+	Node0x64b3b5ad62c0:s1 -> Node0x64b3b5b3bfe0;
+	Node0x64b3b5ad63f0 [shape=record,color="#b70d28ff", style=filled, fillcolor="#bb1b2c70" fontname="Courier",label="{6:\l|  %7 = load i32, ptr %3, align 4\l  %8 = mul nsw i32 %7, 2\l  store i32 %8, ptr %2, align 4\l  br label %12\l}"];
+	Node0x64b3b5ad63f0 -> Node0x64b3b5b3c890;
+	Node0x64b3b5b3bfe0 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#c32e3170" fontname="Courier",label="{9:\l|  %10 = load i32, ptr %3, align 4\l  %11 = sub nsw i32 %10, 1\l  store i32 %11, ptr %2, align 4\l  br label %12\l}"];
+	Node0x64b3b5b3bfe0 -> Node0x64b3b5b3c890;
+	Node0x64b3b5b3c890 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870" fontname="Courier",label="{12:\l|  %13 = load i32, ptr %2, align 4\l  ret i32 %13\l}"];
+}

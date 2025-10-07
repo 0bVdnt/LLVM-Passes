@@ -1,0 +1,2 @@
+goto_test(5) = 10
+goto_test(-5) = 5

@@ -1,0 +1,41 @@
+digraph "CFG for 'early_returns' function" {
+	label="CFG for 'early_returns' function";
+
+	Node0x562b164a3e40 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#e5705870" fontname="Courier",label="{2:\l|  %cff.state = alloca i32, align 4\l  %3 = alloca i32, align 4\l  %4 = alloca i32, align 4\l  %5 = alloca i32, align 4\l  %6 = alloca i32, align 4\l  store i32 %0, ptr %4, align 4\l  store i32 %1, ptr %5, align 4\l  %7 = load i32, ptr %4, align 4\l  %8 = icmp slt i32 %7, 0\l  %cff.init = select i1 %8, i32 1, i32 2\l  store i32 %cff.init, ptr %cff.state, align 4\l  br label %cff.dispatch\l}"];
+	Node0x562b164a3e40 -> Node0x562b164b8470;
+	Node0x562b164a7110 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#cc403a70" fontname="Courier",label="{9:\l|  store i32 -1, ptr %3, align 4\l  store i32 11, ptr %cff.state, align 4\l  br label %cff.dispatch\l}"];
+	Node0x562b164a7110 -> Node0x562b164b8470;
+	Node0x562b164a7170 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#cc403a70" fontname="Courier",label="{10:\l|  %11 = load i32, ptr %5, align 4\l  %12 = icmp slt i32 %11, 0\l  %cff.next = select i1 %12, i32 3, i32 4\l  store i32 %cff.next, ptr %cff.state, align 4\l  br label %cff.dispatch\l}"];
+	Node0x562b164a7170 -> Node0x562b164b8470;
+	Node0x562b164a7a80 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#cc403a70" fontname="Courier",label="{13:\l|  store i32 -2, ptr %3, align 4\l  store i32 11, ptr %cff.state, align 4\l  br label %cff.dispatch\l}"];
+	Node0x562b164a7a80 -> Node0x562b164b8470;
+	Node0x562b164a7ae0 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#cc403a70" fontname="Courier",label="{14:\l|  %15 = load i32, ptr %4, align 4\l  %16 = icmp eq i32 %15, 0\l  %cff.next1 = select i1 %16, i32 5, i32 6\l  store i32 %cff.next1, ptr %cff.state, align 4\l  br label %cff.dispatch\l}"];
+	Node0x562b164a7ae0 -> Node0x562b164b8470;
+	Node0x562b164a7df0 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#cc403a70" fontname="Courier",label="{17:\l|  store i32 0, ptr %3, align 4\l  store i32 11, ptr %cff.state, align 4\l  br label %cff.dispatch\l}"];
+	Node0x562b164a7df0 -> Node0x562b164b8470;
+	Node0x562b164a7e50 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#cc403a70" fontname="Courier",label="{18:\l|  %19 = load i32, ptr %5, align 4\l  %20 = icmp eq i32 %19, 0\l  %cff.next2 = select i1 %20, i32 7, i32 8\l  store i32 %cff.next2, ptr %cff.state, align 4\l  br label %cff.dispatch\l}"];
+	Node0x562b164a7e50 -> Node0x562b164b8470;
+	Node0x562b164a80f0 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#cc403a70" fontname="Courier",label="{21:\l|  store i32 1, ptr %3, align 4\l  store i32 11, ptr %cff.state, align 4\l  br label %cff.dispatch\l}"];
+	Node0x562b164a80f0 -> Node0x562b164b8470;
+	Node0x562b164a8150 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#cc403a70" fontname="Courier",label="{22:\l|  %23 = load i32, ptr %4, align 4\l  %24 = load i32, ptr %5, align 4\l  %25 = add nsw i32 %23, %24\l  store i32 %25, ptr %6, align 4\l  %26 = load i32, ptr %6, align 4\l  %27 = icmp sgt i32 %26, 100\l  %cff.next3 = select i1 %27, i32 9, i32 10\l  store i32 %cff.next3, ptr %cff.state, align 4\l  br label %cff.dispatch\l}"];
+	Node0x562b164a8150 -> Node0x562b164b8470;
+	Node0x562b164a85c0 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#cc403a70" fontname="Courier",label="{28:\l|  store i32 100, ptr %3, align 4\l  store i32 11, ptr %cff.state, align 4\l  br label %cff.dispatch\l}"];
+	Node0x562b164a85c0 -> Node0x562b164b8470;
+	Node0x562b164a8620 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#cc403a70" fontname="Courier",label="{29:\l|  %30 = load i32, ptr %6, align 4\l  store i32 %30, ptr %3, align 4\l  store i32 11, ptr %cff.state, align 4\l  br label %cff.dispatch\l}"];
+	Node0x562b164a8620 -> Node0x562b164b8470;
+	Node0x562b164a79a0 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#e5705870" fontname="Courier",label="{31:\l|  %32 = load i32, ptr %3, align 4\l  ret i32 %32\l}"];
+	Node0x562b164b8470 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870" fontname="Courier",label="{cff.dispatch:\l|  %cff.cur = load i32, ptr %cff.state, align 4\l  switch i32 %cff.cur, label %cff.default [\l    i32 1, label %9\l    i32 2, label %10\l    i32 3, label %13\l    i32 4, label %14\l    i32 5, label %17\l    i32 6, label %18\l    i32 7, label %21\l    i32 8, label %22\l    i32 9, label %28\l    i32 10, label %29\l    i32 11, label %31\l  ]\l|{<s0>def|<s1>1|<s2>2|<s3>3|<s4>4|<s5>5|<s6>6|<s7>7|<s8>8|<s9>9|<s10>10|<s11>11}}"];
+	Node0x562b164b8470:s0 -> Node0x562b164b8500;
+	Node0x562b164b8470:s1 -> Node0x562b164a7110;
+	Node0x562b164b8470:s2 -> Node0x562b164a7170;
+	Node0x562b164b8470:s3 -> Node0x562b164a7a80;
+	Node0x562b164b8470:s4 -> Node0x562b164a7ae0;
+	Node0x562b164b8470:s5 -> Node0x562b164a7df0;
+	Node0x562b164b8470:s6 -> Node0x562b164a7e50;
+	Node0x562b164b8470:s7 -> Node0x562b164a80f0;
+	Node0x562b164b8470:s8 -> Node0x562b164a8150;
+	Node0x562b164b8470:s9 -> Node0x562b164a85c0;
+	Node0x562b164b8470:s10 -> Node0x562b164a8620;
+	Node0x562b164b8470:s11 -> Node0x562b164a79a0;
+	Node0x562b164b8500 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#c7d7f070" fontname="Courier",label="{cff.default:\l|  unreachable\l}"];
+}

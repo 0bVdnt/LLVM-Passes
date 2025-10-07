@@ -1,0 +1,17 @@
+digraph "CFG for 'is_odd' function" {
+	label="CFG for 'is_odd' function";
+
+	Node0x5dd871448f20 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#dc5d4a70" fontname="Courier",label="{1:\l|  %cff.state = alloca i32, align 4\l  %2 = alloca i32, align 4\l  %3 = alloca i32, align 4\l  store i32 %0, ptr %3, align 4\l  %4 = load i32, ptr %3, align 4\l  %5 = icmp eq i32 %4, 0\l  %cff.init = select i1 %5, i32 1, i32 2\l  store i32 %cff.init, ptr %cff.state, align 4\l  br label %cff.dispatch\l}"];
+	Node0x5dd871448f20 -> Node0x5dd87145aef0;
+	Node0x5dd871449630 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#be242e70" fontname="Courier",label="{6:\l|  store i32 0, ptr %2, align 4\l  store i32 3, ptr %cff.state, align 4\l  br label %cff.dispatch\l}"];
+	Node0x5dd871449630 -> Node0x5dd87145aef0;
+	Node0x5dd871449690 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#be242e70" fontname="Courier",label="{7:\l|  %8 = load i32, ptr %3, align 4\l  %9 = sub nsw i32 %8, 1\l  %10 = call i32 @is_even(i32 noundef %9)\l  store i32 %10, ptr %2, align 4\l  store i32 3, ptr %cff.state, align 4\l  br label %cff.dispatch\l}"];
+	Node0x5dd871449690 -> Node0x5dd87145aef0;
+	Node0x5dd871449840 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#dc5d4a70" fontname="Courier",label="{11:\l|  %12 = load i32, ptr %2, align 4\l  ret i32 %12\l}"];
+	Node0x5dd87145aef0 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870" fontname="Courier",label="{cff.dispatch:\l|  %cff.cur = load i32, ptr %cff.state, align 4\l  switch i32 %cff.cur, label %cff.default [\l    i32 1, label %6\l    i32 2, label %7\l    i32 3, label %11\l  ]\l|{<s0>def|<s1>1|<s2>2|<s3>3}}"];
+	Node0x5dd87145aef0:s0 -> Node0x5dd87145af80;
+	Node0x5dd87145aef0:s1 -> Node0x5dd871449630;
+	Node0x5dd87145aef0:s2 -> Node0x5dd871449690;
+	Node0x5dd87145aef0:s3 -> Node0x5dd871449840;
+	Node0x5dd87145af80 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#c7d7f070" fontname="Courier",label="{cff.default:\l|  unreachable\l}"];
+}

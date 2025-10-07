@@ -1,0 +1,9 @@
+Inline asm(5): 15
+Always inline(10): 20
+No inline(20): 30
+Volatile ops: 10
+First time through
+Jumped back
+Setjmp test(15): -15
+First time through
+Setjmp test(5): 5

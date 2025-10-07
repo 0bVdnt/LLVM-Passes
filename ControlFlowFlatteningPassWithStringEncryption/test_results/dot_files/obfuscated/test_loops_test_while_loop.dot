@@ -1,0 +1,17 @@
+digraph "CFG for 'test_while_loop' function" {
+	label="CFG for 'test_while_loop' function";
+
+	Node0x5e8361944250 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#dc5d4a70" fontname="Courier",label="{1:\l|  %cff.state = alloca i32, align 4\l  %2 = alloca i32, align 4\l  %3 = alloca i32, align 4\l  %4 = alloca i32, align 4\l  store i32 %0, ptr %2, align 4\l  store i32 0, ptr %3, align 4\l  store i32 0, ptr %4, align 4\l  store i32 1, ptr %cff.state, align 4\l  br label %cff.dispatch\l}"];
+	Node0x5e8361944250 -> Node0x5e83619554a0;
+	Node0x5e8361944610 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#be242e70" fontname="Courier",label="{5:\l|  %6 = load i32, ptr %4, align 4\l  %7 = load i32, ptr %2, align 4\l  %8 = icmp slt i32 %6, %7\l  %cff.next = select i1 %8, i32 2, i32 3\l  store i32 %cff.next, ptr %cff.state, align 4\l  br label %cff.dispatch\l}"];
+	Node0x5e8361944610 -> Node0x5e83619554a0;
+	Node0x5e83619447e0 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#be242e70" fontname="Courier",label="{9:\l|  %10 = load i32, ptr %4, align 4\l  %11 = load i32, ptr %3, align 4\l  %12 = add nsw i32 %11, %10\l  store i32 %12, ptr %3, align 4\l  %13 = load i32, ptr %4, align 4\l  %14 = add nsw i32 %13, 1\l  store i32 %14, ptr %4, align 4\l  store i32 1, ptr %cff.state, align 4\l  br label %cff.dispatch\l}"];
+	Node0x5e83619447e0 -> Node0x5e83619554a0;
+	Node0x5e8361944840 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#dc5d4a70" fontname="Courier",label="{15:\l|  %16 = load i32, ptr %3, align 4\l  ret i32 %16\l}"];
+	Node0x5e83619554a0 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870" fontname="Courier",label="{cff.dispatch:\l|  %cff.cur = load i32, ptr %cff.state, align 4\l  switch i32 %cff.cur, label %cff.default [\l    i32 1, label %5\l    i32 2, label %9\l    i32 3, label %15\l  ]\l|{<s0>def|<s1>1|<s2>2|<s3>3}}"];
+	Node0x5e83619554a0:s0 -> Node0x5e8361955530;
+	Node0x5e83619554a0:s1 -> Node0x5e8361944610;
+	Node0x5e83619554a0:s2 -> Node0x5e83619447e0;
+	Node0x5e83619554a0:s3 -> Node0x5e8361944840;
+	Node0x5e8361955530 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#c7d7f070" fontname="Courier",label="{cff.default:\l|  unreachable\l}"];
+}

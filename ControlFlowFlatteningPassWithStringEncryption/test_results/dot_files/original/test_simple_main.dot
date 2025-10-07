@@ -1,0 +1,5 @@
+digraph "CFG for 'main' function" {
+	label="CFG for 'main' function";
+
+	Node0x611a82590fb0 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870" fontname="Courier",label="{0:\l|  %1 = call i32 @test_function(i32 noundef 100)\l  %2 = call i32 (ptr, ...) @printf(ptr noundef @.str.1, i32 noundef %1)\l  ret i32 0\l}"];
+}

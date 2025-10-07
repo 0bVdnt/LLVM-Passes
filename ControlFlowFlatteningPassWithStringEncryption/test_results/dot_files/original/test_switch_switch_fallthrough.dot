@@ -1,0 +1,22 @@
+digraph "CFG for 'switch_fallthrough' function" {
+	label="CFG for 'switch_fallthrough' function";
+
+	Node0x6208032e9780 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870" fontname="Courier",label="{1:\l|  %2 = alloca i32, align 4\l  %3 = alloca i32, align 4\l  store i32 %0, ptr %2, align 4\l  store i32 0, ptr %3, align 4\l  %4 = load i32, ptr %2, align 4\l  switch i32 %4, label %17 [\l    i32 10, label %5\l    i32 9, label %8\l    i32 8, label %11\l    i32 7, label %14\l    i32 6, label %14\l  ]\l|{<s0>def|<s1>10|<s2>9|<s3>8|<s4>7|<s5>6}}"];
+	Node0x6208032e9780:s0 -> Node0x6208032ea8f0;
+	Node0x6208032e9780:s1 -> Node0x6208032ea950;
+	Node0x6208032e9780:s2 -> Node0x6208032ea9e0;
+	Node0x6208032e9780:s3 -> Node0x6208032eaa70;
+	Node0x6208032e9780:s4 -> Node0x6208032eab00;
+	Node0x6208032e9780:s5 -> Node0x6208032eab00;
+	Node0x6208032ea950 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#ca3b3770" fontname="Courier",label="{5:\l|  %6 = load i32, ptr %3, align 4\l  %7 = add nsw i32 %6, 10\l  store i32 %7, ptr %3, align 4\l  br label %8\l}"];
+	Node0x6208032ea950 -> Node0x6208032ea9e0;
+	Node0x6208032ea9e0 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#c32e3170" fontname="Courier",label="{8:\l|  %9 = load i32, ptr %3, align 4\l  %10 = add nsw i32 %9, 9\l  store i32 %10, ptr %3, align 4\l  br label %11\l}"];
+	Node0x6208032ea9e0 -> Node0x6208032eaa70;
+	Node0x6208032eaa70 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#be242e70" fontname="Courier",label="{11:\l|  %12 = load i32, ptr %3, align 4\l  %13 = add nsw i32 %12, 8\l  store i32 %13, ptr %3, align 4\l  br label %19\l}"];
+	Node0x6208032eaa70 -> Node0x6208032eb1c0;
+	Node0x6208032eab00 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#c32e3170" fontname="Courier",label="{14:\l|  %15 = load i32, ptr %2, align 4\l  %16 = mul nsw i32 %15, 10\l  store i32 %16, ptr %3, align 4\l  br label %19\l}"];
+	Node0x6208032eab00 -> Node0x6208032eb1c0;
+	Node0x6208032ea8f0 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#ca3b3770" fontname="Courier",label="{17:\l|  %18 = load i32, ptr %2, align 4\l  store i32 %18, ptr %3, align 4\l  br label %19\l}"];
+	Node0x6208032ea8f0 -> Node0x6208032eb1c0;
+	Node0x6208032eb1c0 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870" fontname="Courier",label="{19:\l|  %20 = load i32, ptr %3, align 4\l  ret i32 %20\l}"];
+}

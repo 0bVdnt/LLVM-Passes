@@ -1,0 +1,29 @@
+{
+  "inputFile": "tests/test_nested_if.c",
+  "outputFile": "obfuscated.ll",
+  "timestamp": "2025-10-07T04:41:15Z",
+  "inputParameters": {
+    "obfuscationLevel": "medium",
+    "targetPlatform": "linux",
+    "enableStringEncryption": true,
+    "enableControlFlowFlattening": true
+  },
+  "outputAttributes": {
+    "originalIRStringDataSize": "80 bytes",
+    "obfuscatedIRStringDataSize": "80 bytes",
+    "stringDataSizeChange": "0.00%"
+  },
+  "obfuscationMetrics": {
+    "cyclesCompleted": 1,
+    "passesRun": ["StringEncrypt", "ControlFlowFlattening"],
+    "stringEncryption": {
+      "count": 4,
+      "method": "XOR with dynamic per-run key"
+    },
+    "controlFlowFlattening": {
+      "flattenedFunctions": 2,
+      "flattenedBlocks": 12,
+      "skippedFunctions": 0
+    }
+  }
+}

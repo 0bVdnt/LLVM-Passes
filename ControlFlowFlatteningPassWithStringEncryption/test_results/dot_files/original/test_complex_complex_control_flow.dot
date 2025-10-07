@@ -1,0 +1,40 @@
+digraph "CFG for 'complex_control_flow' function" {
+	label="CFG for 'complex_control_flow' function";
+
+	Node0x601e2ef71270 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#d0473d70" fontname="Courier",label="{3:\l|  %4 = alloca i32, align 4\l  %5 = alloca i32, align 4\l  %6 = alloca i32, align 4\l  %7 = alloca i32, align 4\l  %8 = alloca i32, align 4\l  %9 = alloca i32, align 4\l  store i32 %0, ptr %4, align 4\l  store i32 %1, ptr %5, align 4\l  store i32 %2, ptr %6, align 4\l  store i32 0, ptr %7, align 4\l  store i32 0, ptr %8, align 4\l  %10 = load i32, ptr %4, align 4\l  %11 = icmp sgt i32 %10, 0\l  br i1 %11, label %12, label %13\l|{<s0>T|<s1>F}}"];
+	Node0x601e2ef71270:s0 -> Node0x601e2ef713a0;
+	Node0x601e2ef71270:s1 -> Node0x601e2efd8dc0;
+	Node0x601e2ef713a0 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#d24b4070" fontname="Courier",label="{12:\l|  br label %21\l}"];
+	Node0x601e2ef713a0 -> Node0x601e2efd8f10;
+	Node0x601e2efd8dc0 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#d6524470" fontname="Courier",label="{13:\l|  store i32 0, ptr %9, align 4\l  br label %14\l}"];
+	Node0x601e2efd8dc0 -> Node0x601e2efd9080;
+	Node0x601e2efd9080 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870" fontname="Courier",label="{14:\l|  %15 = load i32, ptr %9, align 4\l  %16 = icmp slt i32 %15, 10\l  br i1 %16, label %17, label %45\l|{<s0>T|<s1>F}}"];
+	Node0x601e2efd9080:s0 -> Node0x601e2efd9810;
+	Node0x601e2efd9080:s1 -> Node0x601e2efd9870;
+	Node0x601e2efd9810 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870" fontname="Courier",label="{17:\l|  %18 = load i32, ptr %9, align 4\l  %19 = load i32, ptr %8, align 4\l  %20 = add nsw i32 %19, %18\l  store i32 %20, ptr %8, align 4\l  br label %21\l}"];
+	Node0x601e2efd9810 -> Node0x601e2efd8f10;
+	Node0x601e2efd8f10 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870" fontname="Courier",label="{21:\l|  %22 = load i32, ptr %5, align 4\l  %23 = icmp sgt i32 %22, 5\l  br i1 %23, label %24, label %34\l|{<s0>T|<s1>F}}"];
+	Node0x601e2efd8f10:s0 -> Node0x601e2efd9c80;
+	Node0x601e2efd8f10:s1 -> Node0x601e2efd9ce0;
+	Node0x601e2efd9c80 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#be242e70" fontname="Courier",label="{24:\l|  %25 = load i32, ptr %8, align 4\l  %26 = mul nsw i32 %25, 2\l  store i32 %26, ptr %8, align 4\l  %27 = load i32, ptr %6, align 4\l  %28 = icmp sgt i32 %27, 10\l  br i1 %28, label %29, label %33\l|{<s0>T|<s1>F}}"];
+	Node0x601e2efd9c80:s0 -> Node0x601e2efd9fc0;
+	Node0x601e2efd9c80:s1 -> Node0x601e2efda020;
+	Node0x601e2efd9fc0 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#dc5d4a70" fontname="Courier",label="{29:\l|  %30 = load i32, ptr %8, align 4\l  %31 = load i32, ptr %6, align 4\l  %32 = add nsw i32 %30, %31\l  store i32 %32, ptr %7, align 4\l  br label %47\l}"];
+	Node0x601e2efd9fc0 -> Node0x601e2efda310;
+	Node0x601e2efda020 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#be242e70" fontname="Courier",label="{33:\l|  br label %37\l}"];
+	Node0x601e2efda020 -> Node0x601e2efda3e0;
+	Node0x601e2efd9ce0 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#be242e70" fontname="Courier",label="{34:\l|  %35 = load i32, ptr %8, align 4\l  %36 = sub nsw i32 %35, 1\l  store i32 %36, ptr %8, align 4\l  br label %37\l}"];
+	Node0x601e2efd9ce0 -> Node0x601e2efda3e0;
+	Node0x601e2efda3e0 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870" fontname="Courier",label="{37:\l|  %38 = load i32, ptr %8, align 4\l  %39 = icmp sgt i32 %38, 100\l  br i1 %39, label %40, label %41\l|{<s0>T|<s1>F}}"];
+	Node0x601e2efda3e0:s0 -> Node0x601e2efda810;
+	Node0x601e2efda3e0:s1 -> Node0x601e2efda870;
+	Node0x601e2efda810 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#d6524470" fontname="Courier",label="{40:\l|  br label %45\l}"];
+	Node0x601e2efda810 -> Node0x601e2efd9870;
+	Node0x601e2efda870 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870" fontname="Courier",label="{41:\l|  br label %42\l}"];
+	Node0x601e2efda870 -> Node0x601e2efda9f0;
+	Node0x601e2efda9f0 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870" fontname="Courier",label="{42:\l|  %43 = load i32, ptr %9, align 4\l  %44 = add nsw i32 %43, 1\l  store i32 %44, ptr %9, align 4\l  br label %14, !llvm.loop !6\l}"];
+	Node0x601e2efda9f0 -> Node0x601e2efd9080;
+	Node0x601e2efd9870 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#d0473d70" fontname="Courier",label="{45:\l|  %46 = load i32, ptr %8, align 4\l  store i32 %46, ptr %7, align 4\l  br label %47\l}"];
+	Node0x601e2efd9870 -> Node0x601e2efda310;
+	Node0x601e2efda310 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#d0473d70" fontname="Courier",label="{47:\l|  %48 = load i32, ptr %7, align 4\l  ret i32 %48\l}"];
+}

@@ -1,0 +1,4 @@
+PHI simple(10, 5): 10
+PHI loop(10): 70
+PHI complex(10, 20, 30): 75
+PHI complex(-5, 10, 20): 50

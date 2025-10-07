@@ -1,0 +1,3 @@
+for_loop(10) = 45
+while_loop(10) = 45
+do_while(10) = 45

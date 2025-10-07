@@ -1,0 +1,29 @@
+{
+  "inputFile": "tests/test_switch.c",
+  "outputFile": "obfuscated.ll",
+  "timestamp": "2025-10-07T04:41:25Z",
+  "inputParameters": {
+    "obfuscationLevel": "medium",
+    "targetPlatform": "linux",
+    "enableStringEncryption": true,
+    "enableControlFlowFlattening": true
+  },
+  "outputAttributes": {
+    "originalIRStringDataSize": "219 bytes",
+    "obfuscatedIRStringDataSize": "219 bytes",
+    "stringDataSizeChange": "0.00%"
+  },
+  "obfuscationMetrics": {
+    "cyclesCompleted": 1,
+    "passesRun": ["StringEncrypt", "ControlFlowFlattening"],
+    "stringEncryption": {
+      "count": 10,
+      "method": "XOR with dynamic per-run key"
+    },
+    "controlFlowFlattening": {
+      "flattenedFunctions": 4,
+      "flattenedBlocks": 27,
+      "skippedFunctions": 0
+    }
+  }
+}
