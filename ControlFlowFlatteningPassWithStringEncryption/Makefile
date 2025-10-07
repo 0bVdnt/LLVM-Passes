@@ -13,8 +13,20 @@ PASS_PLUGIN := $(BUILD_DIR)/lib/ChakravyuhaControlFlowFlatteningPass.so
 
 # Automatic test discovery
 TEST_SOURCES := $(wildcard $(TEST_DIR)/test_*.c)
-TEST_NAMES := $(basename $(notdir $(TEST_SOURCES)))
-TEST_TARGETS := $(patsubst test_%,test-%,$(TEST_NAMES))
+TEST_NAMES   := $(basename $(notdir $(TEST_SOURCES)))
+
+# Generate test targets for each type of obfuscation
+TEST_TARGETS_FULL   := $(patsubst test_%,test-full-%,$(TEST_NAMES))
+TEST_TARGETS_CFF    := $(patsubst test_%,test-cff-%,$(TEST_NAMES))
+TEST_TARGETS_STRING := $(patsubst test_%,test-string-%,$(TEST_NAMES))
+
+PASSES_FULL   := 'chakravyuha-string-encrypt,chakravyuha-control-flow-flatten'
+PASSES_CFF    := 'chakravyuha-control-flow-flatten'
+PASSES_STRING := 'chakravyuha-string-encrypt'
+
+# Variable to control which binary to run 'original' on. Defaults to 'string'.
+# Can be overridden, e.g., make test-string-simple TARGET=original
+TARGET ?= string
 
 # Colors
 RED := \033[0;31m
@@ -26,7 +38,7 @@ CYAN := \033[0;36m
 NC := \033[0m
 
 .PHONY: all
-all: build test
+all: build test-full
 
 .PHONY: setup
 setup:
@@ -62,9 +74,15 @@ clean-tests:
 	@echo "Cleaning test results..."
 	@rm -rf $(RESULTS_DIR)
 	@rm -f .*.dot
-
-define run_single_test
-	@echo "$(YELLOW)Testing $(1)...$(NC)"
+	
+# Generic test runner
+# Arg 1: Test name (e.g., test_simple)
+# Arg 2: Obfuscation suffix (e.g., full, cff, string)
+# Arg 3: LLVM passes to apply
+define run_test
+	@echo "$(YELLOW)Testing $(1) (Obfuscation: $(2))...$(NC)"
+	# For compatibility with visualization scripts, dot/image outputs are not suffixed
+	# and will be overwritten by the last test run.
 	@mkdir -p $(RESULTS_DIR)/{ll_files,logs,binaries,reports}
 	@mkdir -p $(RESULTS_DIR)/dot_files/{original,obfuscated}
 	@mkdir -p $(RESULTS_DIR)/visualizations/{original,obfuscated,comparison}
@@ -78,13 +96,12 @@ define run_single_test
 				mv "$$dot" "$(RESULTS_DIR)/dot_files/original/$(1)_$${dot#.}" 2>/dev/null || true; \
 			fi; \
 		done; \
-		echo "$(CYAN)  [3/7] Applying passes (StringEncrypt + CFF) and emitting report...$(NC)"; \
-		$(OPT) -load-pass-plugin=$(PASS_PLUGIN) \
-			-passes='chakravyuha-string-encrypt,chakravyuha-control-flow-flatten,chakravyuha-emit-report,dot-cfg' \
+		echo "$(CYAN)  [3/7] Applying passes ($(2)) and emitting report...$(NC)"; \
+		$(OPT) -load-pass-plugin=$(PASS_PLUGIN) -passes='$(3),chakravyuha-emit-report,dot-cfg' \
 			$(RESULTS_DIR)/ll_files/$(1).ll \
-			-o $(RESULTS_DIR)/ll_files/$(1)_obfuscated.ll \
-			1>$(RESULTS_DIR)/reports/$(1).json \
-			2>$(RESULTS_DIR)/logs/$(1).log; \
+			-o $(RESULTS_DIR)/ll_files/$(1)_$(2).ll \
+			1>$(RESULTS_DIR)/reports/$(1)_$(2).json \
+			2>$(RESULTS_DIR)/logs/$(1)_$(2).log; \
 		echo "$(CYAN)  [4/7] Saving obfuscated CFG...$(NC)"; \
 		for dot in .*.dot; do \
 			if [ -f "$$dot" ]; then \
@@ -92,23 +109,23 @@ define run_single_test
 			fi; \
 		done; \
 		echo "$(CYAN)  [5/7] Compiling binaries...$(NC)"; \
-		$(CC) $(RESULTS_DIR)/ll_files/$(1)_obfuscated.ll \
-			-o $(RESULTS_DIR)/binaries/$(1)_obfuscated 2>/dev/null; \
+		$(CC) $(RESULTS_DIR)/ll_files/$(1)_$(2).ll \
+			-o $(RESULTS_DIR)/binaries/$(1)_$(2) 2>/dev/null; \
 		$(CC) $(TEST_DIR)/$(1).c -o $(RESULTS_DIR)/binaries/$(1)_original 2>/dev/null; \
 		echo "$(CYAN)  [6/7] Running and comparing outputs...$(NC)"; \
 		$(RESULTS_DIR)/binaries/$(1)_original > $(RESULTS_DIR)/$(1)_original.out 2>&1; \
-		$(RESULTS_DIR)/binaries/$(1)_obfuscated > $(RESULTS_DIR)/$(1)_obfuscated.out 2>&1; \
-		if diff -q $(RESULTS_DIR)/$(1)_original.out $(RESULTS_DIR)/$(1)_obfuscated.out >/dev/null; then \
+		$(RESULTS_DIR)/binaries/$(1)_$(2) > $(RESULTS_DIR)/$(1)_$(2).out 2>&1; \
+		if diff -q $(RESULTS_DIR)/$(1)_original.out $(RESULTS_DIR)/$(1)_$(2).out >/dev/null; then \
 			echo "$(GREEN)  ✓ Test passed - outputs match!$(NC)"; \
-			grep "CFF_METRICS" $(RESULTS_DIR)/logs/$(1).log 2>/dev/null | sed 's/.*CFF_METRICS:/  Metrics: CFF_METRICS:/' || true; \
-			echo "  Report: $(RESULTS_DIR)/reports/$(1).json"; \
+			grep "CFF_METRICS" $(RESULTS_DIR)/logs/$(1)_$(2).log 2>/dev/null | sed 's/.*CFF_METRICS:/  Metrics: CFF_METRICS:/' || true; \
+			echo "  Report: $(RESULTS_DIR)/reports/$(1)_$(2).json"; \
 		else \
 			echo "$(RED)  ✗ Test failed - outputs differ!$(NC)"; \
 			echo "  Expected:"; \
 			cat $(RESULTS_DIR)/$(1)_original.out | sed 's/^/    /'; \
 			echo "  Got:"; \
-			cat $(RESULTS_DIR)/$(1)_obfuscated.out | sed 's/^/    /'; \
-			echo "  Report (may still exist): $(RESULTS_DIR)/reports/$(1).json"; \
+			cat $(RESULTS_DIR)/$(1)_$(2).out | sed 's/^/    /'; \
+			echo "  Report (may still exist): $(RESULTS_DIR)/reports/$(1)_$(2).json"; \
 		fi; \
 		echo "$(CYAN)  [7/7] Generating visualizations...$(NC)"; \
 		$(MAKE) -s visualize-test TEST_NAME=$(1); \
@@ -116,15 +133,52 @@ define run_single_test
 		echo "$(RED)  Test file not found: $(TEST_DIR)/$(1).c$(NC)"; \
 	fi
 endef
+	
+.PHONY: test-full-% test-cff-% test-string-%
 
-.PHONY: test-%
-test-%: build setup
-	$(call run_single_test,test_$*)
+# Target for a single test with full obfuscation (CFF + String)
+test-full-%: build setup
+	$(call run_test,test_$*,full,$(PASSES_FULL))
+
+# Target for a single test with CFF obfuscation only
+test-cff-%: build setup
+	$(call run_test,test_$*,cff,$(PASSES_CFF))
+
+# Target for a single test with String Encryption only
+# Allows specifying strings to search for in the binary.
+# Example: make test-string-simple SEARCH_STRINGS="simple,test"
+test-string-%: build setup
+	$(call run_test,test_$*,string,$(PASSES_STRING))
+	@if [ ! -z "$(SEARCH_STRINGS)" ]; then \
+		echo "$(CYAN)  [8/8] Verifying string encryption for test_$*...$(NC)"; \
+		FAIL=0; \
+		OIFS=$$IFS; IFS=','; \
+		for s in $(SEARCH_STRINGS); do \
+			if strings $(RESULTS_DIR)/binaries/test_$*_string | grep -Fq "$$s"; then \
+				echo "$(RED)    ✗ FOUND forbidden string '$$s' in binary$(NC)"; \
+				FAIL=1; \
+			else \
+				echo "$(GREEN)    ✓ OK: String '$$s' not found in binary$(NC)"; \
+			fi; \
+		done; \
+		IFS=$$OIFS; \
+		if [ $$FAIL -eq 1 ]; then echo "$(RED)  ✗ String check failed!$(NC)"; exit 1; fi; \
+	fi
+	@echo "$(CYAN)--- Grep-able strings from $(TARGET) binary for 'test_$*' ---$(NC)"
+	@strings $(RESULTS_DIR)/binaries/test_$*_$(TARGET)
+	@echo "$(CYAN)-----------------------------------------------------------$(NC)"
+
+.PHONY: test test-full test-cff test-string
 
 .PHONY: test
-test: build setup $(TEST_TARGETS)
-	@echo ""
-	@$(MAKE) -s summary
+test: test-full
+
+test-full: build setup $(TEST_TARGETS_FULL)
+	@$(MAKE) summary TYPE=full
+test-cff: build setup $(TEST_TARGETS_CFF)
+	@$(MAKE) summary TYPE=cff
+test-string: build setup $(TEST_TARGETS_STRING)
+	@$(MAKE) summary TYPE=string
 
 .PHONY: list-tests
 list-tests:
@@ -218,9 +272,10 @@ stats:
 	done
 
 .PHONY: summary
+TYPE ?= full
 summary:
 	@echo "$(YELLOW)=========================================="
-	@echo "Test Summary"
+	@echo "Test Summary (Type: $(TYPE))"
 	@echo "==========================================$(NC)"
 	@passed=0; \
 	failed=0; \
@@ -228,15 +283,18 @@ summary:
 	for out in $(RESULTS_DIR)/*_original.out; do \
 		if [ -f "$$out" ]; then \
 			test_name=$$(basename "$$out" _original.out); \
-			total=$$((total + 1)); \
-			if [ -f "$(RESULTS_DIR)/$${test_name}_obfuscated.out" ]; then \
-				if diff -q "$$out" "$(RESULTS_DIR)/$${test_name}_obfuscated.out" >/dev/null; then \
+			obf_out="$(RESULTS_DIR)/$${test_name}_$(TYPE).out"; \
+			if [ -f "$$obf_out" ]; then \
+				total=$$((total + 1)); \
+				if diff -q "$$out" "$$obf_out" >/dev/null; then \
 					echo "$(GREEN)✓ $$test_name$(NC)"; \
 					passed=$$((passed + 1)); \
 				else \
 					echo "$(RED)✗ $$test_name$(NC)"; \
 					failed=$$((failed + 1)); \
 				fi; \
+			else \
+				echo "$(YELLOW)_ $$test_name (No result found for type '$(TYPE)')$(NC)"; \
 			fi; \
 		fi; \
 	done; \
@@ -264,16 +322,25 @@ view:
 help:
 	@echo "$(YELLOW)Control Flow Flattening + String Encryption - Test Suite$(NC)"
 	@echo "======================================================"
-	@echo "$(MAGENTA)Basic Commands:$(NC)"
+	@echo "$(MAGENTA)Build & Clean Commands:$(NC)"
 	@echo "  $(GREEN)make build$(NC)         - Build the pass plugin"
-	@echo "  $(GREEN)make test$(NC)          - Run all tests ($(words $(TEST_NAMES)) tests found)"
-	@echo "  $(GREEN)make test-<name>$(NC)   - Run a specific test (e.g., make test-simple)"
-	@echo "  $(GREEN)make list-tests$(NC)    - List available tests"
 	@echo "  $(GREEN)make clean$(NC)         - Clean all artifacts"
+	@echo ""
+	@echo "$(MAGENTA)Test Suites:$(NC)"
+	@echo "  $(GREEN)make test-full$(NC)     - Run all tests with CFF + String Encryption"
+	@echo "  $(GREEN)make test-cff$(NC)      - Run all tests with CFF only"
+	@echo "  $(GREEN)make test-string$(NC)   - Run all tests with String Encryption only"
+	@echo "  $(GREEN)make test$(NC)          - Alias for 'make test-full'"
+	@echo "  $(GREEN)make list-tests$(NC)    - List available tests"
+	@echo ""
+	@echo "  You can run individual tests, e.g.: $(GREEN)make test-cff-simple$(NC)"
+	@echo "  For string tests, check for absence of strings:"
+	@echo "  $(GREEN)make test-string-simple SEARCH_STRINGS=\"some_string,another\"$(NC)"
+	@echo "  To inspect strings in a specific binary, use TARGET:"
+	@echo "  $(GREEN)make test-string-simple TARGET=string$(NC)   (inspects obfuscated binary)"
 	@echo ""
 	@echo "$(MAGENTA)Visualization Commands:$(NC)"
 	@echo "  $(GREEN)make visualize$(NC)     - Generate all CFG visualizations"
-	@echo "  $(GREEN)make compare-<name>$(NC)- Side-by-side comparison for specific test"
 	@echo "  $(GREEN)make view$(NC)          - Open comparison viewer in browser"
 	@echo ""
 	@echo "$(MAGENTA)Analysis Commands:$(NC)"
@@ -282,6 +349,6 @@ help:
 	@echo ""
 	@echo "$(CYAN)Example workflow:$(NC)"
 	@echo "  1. make build"
-	@echo "  2. make test"
+	@echo "  2. make test-cff"
 	@echo "  3. make visualize"
 	@echo "  4. make view"

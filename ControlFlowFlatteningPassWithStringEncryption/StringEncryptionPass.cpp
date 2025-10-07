@@ -7,7 +7,6 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 #include <random>
@@ -106,10 +105,7 @@ llvm::PreservedAnalyses StringEncryptionPass::run(Module &M,
       continue;
     if (auto *CDA = dyn_cast<ConstantDataArray>(GV.getInitializer())) {
       if (CDA->isString()) {
-        if (GV.getName().starts_with(".str.") ||
-            GV.getName().starts_with(".str")) {
-          StringGlobalsToEncrypt.push_back(&GV);
-        }
+        StringGlobalsToEncrypt.push_back(&GV);
       }
     }
   }
