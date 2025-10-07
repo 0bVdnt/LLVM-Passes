@@ -1,7 +1,0 @@
-Option 2 selected
-Basic switch(2): 200
-Invalid option
-Basic switch(10): -1
-Fallthrough switch(10): 27
-Fallthrough switch(7): 70
-Nested switch(1,2): 12

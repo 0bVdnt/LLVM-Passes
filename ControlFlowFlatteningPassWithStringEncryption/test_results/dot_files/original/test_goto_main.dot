@@ -1,5 +1,0 @@
-digraph "CFG for 'main' function" {
-	label="CFG for 'main' function";
-
-	Node0x592ee6c85e00 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870" fontname="Courier",label="{0:\l|  %1 = alloca i32, align 4\l  store i32 0, ptr %1, align 4\l  %2 = call i32 @function_with_goto(i32 noundef 5)\l  %3 = call i32 (ptr, ...) @printf(ptr noundef @.str, i32 noundef %2)\l  %4 = call i32 @function_with_goto(i32 noundef -5)\l  %5 = call i32 (ptr, ...) @printf(ptr noundef @.str.1, i32 noundef %4)\l  ret i32 0\l}"];
-}

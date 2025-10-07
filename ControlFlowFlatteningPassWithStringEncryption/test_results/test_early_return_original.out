@@ -1,6 +1,0 @@
-early_returns(-5, 10) = -1
-early_returns(5, -10) = -2
-early_returns(0, 10) = 0
-early_returns(5, 0) = 1
-early_returns(50, 60) = 100
-early_returns(20, 30) = 50

@@ -1,5 +1,0 @@
-digraph "CFG for 'with_inline_asm' function" {
-	label="CFG for 'with_inline_asm' function";
-
-	Node0x5a2df06fe370 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870" fontname="Courier",label="{1:\l|  %2 = alloca i32, align 4\l  %3 = alloca i32, align 4\l  store i32 %0, ptr %2, align 4\l  %4 = load i32, ptr %2, align 4\l  %5 = call i32 asm sideeffect \"movl $1, $0\\0A\\09addl $$10, $0\",\l... \"=r,r,~\{dirflag\},~\{fpsr\},~\{flags\}\"(i32 %4) #5, !srcloc !6\l  store i32 %5, ptr %3, align 4\l  %6 = load i32, ptr %3, align 4\l  ret i32 %6\l}"];
-}

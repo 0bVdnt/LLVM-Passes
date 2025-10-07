@@ -1,5 +1,0 @@
-digraph "CFG for 'main' function" {
-	label="CFG for 'main' function";
-
-	Node0x6007ce005b40 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870" fontname="Courier",label="{0:\l|  %1 = alloca i32, align 4\l  store i32 0, ptr %1, align 4\l  %2 = call i32 @factorial(i32 noundef 5)\l  %3 = call i32 (ptr, ...) @printf(ptr noundef @.str, i32 noundef %2)\l  %4 = call i32 @fibonacci(i32 noundef 10)\l  %5 = call i32 (ptr, ...) @printf(ptr noundef @.str.1, i32 noundef %4)\l  %6 = call i32 @ackermann(i32 noundef 2, i32 noundef 3)\l  %7 = call i32 (ptr, ...) @printf(ptr noundef @.str.2, i32 noundef %6)\l  %8 = call i32 @is_even(i32 noundef 10)\l  %9 = call i32 (ptr, ...) @printf(ptr noundef @.str.3, i32 noundef %8)\l  %10 = call i32 @is_odd(i32 noundef 10)\l  %11 = call i32 (ptr, ...) @printf(ptr noundef @.str.4, i32 noundef %10)\l  ret i32 0\l}"];
-}
