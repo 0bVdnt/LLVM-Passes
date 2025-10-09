@@ -1,5 +1,0 @@
-digraph "CFG for 'volatile_operations' function" {
-	label="CFG for 'volatile_operations' function";
-
-	Node0x58079e49fba0 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870" fontname="Courier",label="{1:\l|  %dummy.var4 = alloca i32, align 4\l  %dummy.var3 = alloca i32, align 4\l  %dummy.var2 = alloca i32, align 4\l  %dummy.var1 = alloca i32, align 4\l  %dummy.var = alloca i32, align 4\l  %2 = alloca ptr, align 8\l  %3 = alloca i32, align 4\l  store ptr %0, ptr %2, align 8\l  %4 = load ptr, ptr %2, align 8\l  %5 = load volatile i32, ptr %4, align 4\l  store volatile i32 %5, ptr %3, align 4\l  %6 = load volatile i32, ptr %3, align 4\l  %7 = mul nsw i32 %6, 2\l  store volatile i32 %7, ptr %3, align 4\l  %8 = load volatile i32, ptr %3, align 4\l  %9 = load ptr, ptr %2, align 8\l  store volatile i32 %8, ptr %9, align 4\l  %10 = load volatile i32, ptr %3, align 4\l  ret i32 %10\l}"];
-}

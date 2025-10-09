@@ -1,5 +1,0 @@
-digraph "CFG for 'main' function" {
-	label="CFG for 'main' function";
-
-	Node0x5e3caefcb2a0 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870" fontname="Courier",label="{0:\l|  %dummy.var4 = alloca i32, align 4\l  %dummy.var3 = alloca i32, align 4\l  %dummy.var2 = alloca i32, align 4\l  %dummy.var1 = alloca i32, align 4\l  %dummy.var = alloca i32, align 4\l  %1 = call i32 @test_function(i32 noundef 100)\l  %.str.1.dec.alloca = alloca [3 x i8], align 1\l  call void @chakravyuha_decrypt_string(ptr %.str.1.dec.alloca, ptr\l... @.str.1.enc, i32 3)\l  %2 = call i32 (ptr, ...) @printf(ptr noundef %.str.1.dec.alloca, i32 noundef\l... %1)\l  ret i32 0\l}"];
-}

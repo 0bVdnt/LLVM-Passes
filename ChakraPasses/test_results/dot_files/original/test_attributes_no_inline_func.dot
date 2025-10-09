@@ -1,5 +1,0 @@
-digraph "CFG for 'no_inline_func' function" {
-	label="CFG for 'no_inline_func' function";
-
-	Node0x606822cf53e0 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870" fontname="Courier",label="{1:\l|  %2 = alloca i32, align 4\l  store i32 %0, ptr %2, align 4\l  %3 = load i32, ptr %2, align 4\l  %4 = add nsw i32 %3, 10\l  ret i32 %4\l}"];
-}
