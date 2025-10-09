@@ -1,0 +1,14 @@
+digraph "CFG for 'function_with_goto' function" {
+	label="CFG for 'function_with_goto' function";
+
+	Node0x622387ed4c90 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870" fontname="Courier",label="{1:\l|  %2 = alloca i32, align 4\l  %3 = alloca i32, align 4\l  store i32 %0, ptr %2, align 4\l  store i32 0, ptr %3, align 4\l  %4 = load i32, ptr %2, align 4\l  %5 = icmp slt i32 %4, 0\l  br i1 %5, label %6, label %7\l|{<s0>T|<s1>F}}"];
+	Node0x622387ed4c90:s0 -> Node0x622387f36260;
+	Node0x622387ed4c90:s1 -> Node0x622387f38ff0;
+	Node0x622387f36260 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#c32e3170" fontname="Courier",label="{6:\l|  br label %10\l}"];
+	Node0x622387f36260 -> Node0x622387f39140;
+	Node0x622387f38ff0 [shape=record,color="#b70d28ff", style=filled, fillcolor="#bb1b2c70" fontname="Courier",label="{7:\l|  %8 = load i32, ptr %2, align 4\l  %9 = mul nsw i32 %8, 2\l  store i32 %9, ptr %3, align 4\l  br label %13\l}"];
+	Node0x622387f38ff0 -> Node0x622387f39970;
+	Node0x622387f39140 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#c32e3170" fontname="Courier",label="{10:\l|  %11 = load i32, ptr %2, align 4\l  %12 = sub nsw i32 0, %11\l  store i32 %12, ptr %3, align 4\l  br label %13\l}"];
+	Node0x622387f39140 -> Node0x622387f39970;
+	Node0x622387f39970 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870" fontname="Courier",label="{13:\l|  %14 = load i32, ptr %3, align 4\l  ret i32 %14\l}"];
+}

@@ -1,0 +1,32 @@
+digraph "CFG for 'early_returns' function" {
+	label="CFG for 'early_returns' function";
+
+	Node0x648018c073f0 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870" fontname="Courier",label="{2:\l|  %3 = alloca i32, align 4\l  %4 = alloca i32, align 4\l  %5 = alloca i32, align 4\l  %6 = alloca i32, align 4\l  store i32 %0, ptr %4, align 4\l  store i32 %1, ptr %5, align 4\l  %7 = load i32, ptr %4, align 4\l  %8 = icmp slt i32 %7, 0\l  br i1 %8, label %9, label %10\l|{<s0>T|<s1>F}}"];
+	Node0x648018c073f0:s0 -> Node0x648018c6cdb0;
+	Node0x648018c073f0:s1 -> Node0x648018c6ce10;
+	Node0x648018c6cdb0 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#c32e3170" fontname="Courier",label="{9:\l|  store i32 -1, ptr %3, align 4\l  br label %31\l}"];
+	Node0x648018c6cdb0 -> Node0x648018c6d640;
+	Node0x648018c6ce10 [shape=record,color="#b70d28ff", style=filled, fillcolor="#bb1b2c70" fontname="Courier",label="{10:\l|  %11 = load i32, ptr %5, align 4\l  %12 = icmp slt i32 %11, 0\l  br i1 %12, label %13, label %14\l|{<s0>T|<s1>F}}"];
+	Node0x648018c6ce10:s0 -> Node0x648018c6d790;
+	Node0x648018c6ce10:s1 -> Node0x648018c6d7f0;
+	Node0x648018c6d790 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#c5333470" fontname="Courier",label="{13:\l|  store i32 -2, ptr %3, align 4\l  br label %31\l}"];
+	Node0x648018c6d790 -> Node0x648018c6d640;
+	Node0x648018c6d7f0 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#be242e70" fontname="Courier",label="{14:\l|  %15 = load i32, ptr %4, align 4\l  %16 = icmp eq i32 %15, 0\l  br i1 %16, label %17, label %18\l|{<s0>T|<s1>F}}"];
+	Node0x648018c6d7f0:s0 -> Node0x648018c6db00;
+	Node0x648018c6d7f0:s1 -> Node0x648018c6db60;
+	Node0x648018c6db00 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#ca3b3770" fontname="Courier",label="{17:\l|  store i32 0, ptr %3, align 4\l  br label %31\l}"];
+	Node0x648018c6db00 -> Node0x648018c6d640;
+	Node0x648018c6db60 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#c5333470" fontname="Courier",label="{18:\l|  %19 = load i32, ptr %5, align 4\l  %20 = icmp eq i32 %19, 0\l  br i1 %20, label %21, label %22\l|{<s0>T|<s1>F}}"];
+	Node0x648018c6db60:s0 -> Node0x648018c6de00;
+	Node0x648018c6db60:s1 -> Node0x648018c6de60;
+	Node0x648018c6de00 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#cc403a70" fontname="Courier",label="{21:\l|  store i32 1, ptr %3, align 4\l  br label %31\l}"];
+	Node0x648018c6de00 -> Node0x648018c6d640;
+	Node0x648018c6de60 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#ca3b3770" fontname="Courier",label="{22:\l|  %23 = load i32, ptr %4, align 4\l  %24 = load i32, ptr %5, align 4\l  %25 = add nsw i32 %23, %24\l  store i32 %25, ptr %6, align 4\l  %26 = load i32, ptr %6, align 4\l  %27 = icmp sgt i32 %26, 100\l  br i1 %27, label %28, label %29\l|{<s0>T|<s1>F}}"];
+	Node0x648018c6de60:s0 -> Node0x648018c6e2d0;
+	Node0x648018c6de60:s1 -> Node0x648018c6e330;
+	Node0x648018c6e2d0 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#d0473d70" fontname="Courier",label="{28:\l|  store i32 100, ptr %3, align 4\l  br label %31\l}"];
+	Node0x648018c6e2d0 -> Node0x648018c6d640;
+	Node0x648018c6e330 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#d0473d70" fontname="Courier",label="{29:\l|  %30 = load i32, ptr %6, align 4\l  store i32 %30, ptr %3, align 4\l  br label %31\l}"];
+	Node0x648018c6e330 -> Node0x648018c6d640;
+	Node0x648018c6d640 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870" fontname="Courier",label="{31:\l|  %32 = load i32, ptr %3, align 4\l  ret i32 %32\l}"];
+}

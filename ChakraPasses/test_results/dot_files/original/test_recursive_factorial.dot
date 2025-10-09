@@ -1,0 +1,12 @@
+digraph "CFG for 'factorial' function" {
+	label="CFG for 'factorial' function";
+
+	Node0x5916b6fae270 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870" fontname="Courier",label="{1:\l|  %2 = alloca i32, align 4\l  %3 = alloca i32, align 4\l  store i32 %0, ptr %3, align 4\l  %4 = load i32, ptr %3, align 4\l  %5 = icmp sle i32 %4, 1\l  br i1 %5, label %6, label %7\l|{<s0>T|<s1>F}}"];
+	Node0x5916b6fae270:s0 -> Node0x5916b6fae3a0;
+	Node0x5916b6fae270:s1 -> Node0x5916b7013ed0;
+	Node0x5916b6fae3a0 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#be242e70" fontname="Courier",label="{6:\l|  store i32 1, ptr %2, align 4\l  br label %13\l}"];
+	Node0x5916b6fae3a0 -> Node0x5916b70140c0;
+	Node0x5916b7013ed0 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#be242e70" fontname="Courier",label="{7:\l|  %8 = load i32, ptr %3, align 4\l  %9 = load i32, ptr %3, align 4\l  %10 = sub nsw i32 %9, 1\l  %11 = call i32 @factorial(i32 noundef %10)\l  %12 = mul nsw i32 %8, %11\l  store i32 %12, ptr %2, align 4\l  br label %13\l}"];
+	Node0x5916b7013ed0 -> Node0x5916b70140c0;
+	Node0x5916b70140c0 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870" fontname="Courier",label="{13:\l|  %14 = load i32, ptr %2, align 4\l  ret i32 %14\l}"];
+}

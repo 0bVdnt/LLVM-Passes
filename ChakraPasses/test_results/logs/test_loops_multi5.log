@@ -1,0 +1,16 @@
+Starting multi-cycle obfuscation with 5 cycles
+  Cycle 1/5
+CFF_METRICS:{"flattenedFunctions":4,"flattenedBlocks":13,"skippedFunctions":0}
+  Cycle 2/5
+CFF_METRICS:{"flattenedFunctions":4,"flattenedBlocks":54,"skippedFunctions":0}
+  Cycle 3/5
+CFF_METRICS:{"flattenedFunctions":4,"flattenedBlocks":163,"skippedFunctions":0}
+  Cycle 4/5
+CFF_METRICS:{"flattenedFunctions":4,"flattenedBlocks":321,"skippedFunctions":0}
+  Cycle 5/5
+CFF_METRICS:{"flattenedFunctions":4,"flattenedBlocks":463,"skippedFunctions":0}
+Writing '.test_for_loop.dot'...
+Writing '.test_while_loop.dot'...
+Writing '.test_do_while.dot'...
+Writing '.main.dot'...
+Writing '.chakravyuha_decrypt_string.dot'...

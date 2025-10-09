@@ -1,0 +1,12 @@
+digraph "CFG for 'is_even' function" {
+	label="CFG for 'is_even' function";
+
+	Node0x5916b7017490 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870" fontname="Courier",label="{1:\l|  %2 = alloca i32, align 4\l  %3 = alloca i32, align 4\l  store i32 %0, ptr %3, align 4\l  %4 = load i32, ptr %3, align 4\l  %5 = icmp eq i32 %4, 0\l  br i1 %5, label %6, label %7\l|{<s0>T|<s1>F}}"];
+	Node0x5916b7017490:s0 -> Node0x5916b70177a0;
+	Node0x5916b7017490:s1 -> Node0x5916b7017800;
+	Node0x5916b70177a0 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#c32e3170" fontname="Courier",label="{6:\l|  store i32 1, ptr %2, align 4\l  br label %11\l}"];
+	Node0x5916b70177a0 -> Node0x5916b70179b0;
+	Node0x5916b7017800 [shape=record,color="#b70d28ff", style=filled, fillcolor="#bb1b2c70" fontname="Courier",label="{7:\l|  %8 = load i32, ptr %3, align 4\l  %9 = sub nsw i32 %8, 1\l  %10 = call i32 @is_odd(i32 noundef %9)\l  store i32 %10, ptr %2, align 4\l  br label %11\l}"];
+	Node0x5916b7017800 -> Node0x5916b70179b0;
+	Node0x5916b70179b0 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870" fontname="Courier",label="{11:\l|  %12 = load i32, ptr %2, align 4\l  ret i32 %12\l}"];
+}

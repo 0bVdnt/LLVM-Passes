@@ -1,0 +1,84 @@
+{
+  "timestamp": "2025-10-09T13:51:36Z",
+  "inputFile": "tests/test_early_return.c",
+  "outputFile": "obfuscated.ll",
+  "inputParameters": {
+    "obfuscationLevel": "medium",
+    "targetPlatform": "linux",
+    "requestedCycles": 5,
+    "enableStringEncryption": true,
+    "enableControlFlowFlattening": true,
+    "enableFakeCodeInsertion": true
+  },
+  "outputAttributes": {
+    "originalBinarySize": "0 B",
+    "obfuscatedBinarySize": "0 B",
+    "binarySizeIncrease": "0.00%",
+    "originalIRStringDataSize": "165 bytes",
+    "obfuscatedIRStringDataSize": "165 bytes",
+    "stringDataSizeChange": "0.00%",
+    "compilationTimeSeconds": 0.000000e+00,
+    "obfuscationMethods": ["String Encryption (XOR)", "Control Flow Flattening", "Fake Code Insertion", "Fake Loop Insertion", "Fake Conditional Insertion"]
+  },
+  "obfuscationMetrics": {
+    "cyclesCompleted": 5,
+    "passesRun": ["StringEncrypt", "ControlFlowFlattening", "FakeCodeInsertion", "ControlFlowFlattening", "FakeCodeInsertion", "ControlFlowFlattening", "FakeCodeInsertion", "ControlFlowFlattening", "FakeCodeInsertion", "ControlFlowFlattening", "FakeCodeInsertion"],
+    "stringEncryption": {
+      "count": 6,
+      "method": "XOR with dynamic per-run key"
+    },
+    "controlFlowFlattening": {
+      "flattenedFunctions": 10,
+      "flattenedBlocks": 497,
+      "skippedFunctions": 0
+    },
+    "fakeCodeInsertion": {
+      "totalBogusInstructions": 1455,
+      "fakeBlocks": 42,
+      "fakeLoops": 23,
+      "fakeConditionals": 31
+    }
+  }
+}
+{
+  "timestamp": "2025-10-09T13:51:36Z",
+  "inputFile": "tests/test_early_return.c",
+  "outputFile": "obfuscated.ll",
+  "inputParameters": {
+    "obfuscationLevel": "medium",
+    "targetPlatform": "linux",
+    "requestedCycles": 5,
+    "enableStringEncryption": true,
+    "enableControlFlowFlattening": true,
+    "enableFakeCodeInsertion": true
+  },
+  "outputAttributes": {
+    "originalBinarySize": "0 B",
+    "obfuscatedBinarySize": "0 B",
+    "binarySizeIncrease": "0.00%",
+    "originalIRStringDataSize": "165 bytes",
+    "obfuscatedIRStringDataSize": "165 bytes",
+    "stringDataSizeChange": "0.00%",
+    "compilationTimeSeconds": 0.000000e+00,
+    "obfuscationMethods": ["String Encryption (XOR)", "Control Flow Flattening", "Fake Code Insertion", "Fake Loop Insertion", "Fake Conditional Insertion"]
+  },
+  "obfuscationMetrics": {
+    "cyclesCompleted": 5,
+    "passesRun": ["StringEncrypt", "ControlFlowFlattening", "FakeCodeInsertion", "ControlFlowFlattening", "FakeCodeInsertion", "ControlFlowFlattening", "FakeCodeInsertion", "ControlFlowFlattening", "FakeCodeInsertion", "ControlFlowFlattening", "FakeCodeInsertion"],
+    "stringEncryption": {
+      "count": 6,
+      "method": "XOR with dynamic per-run key"
+    },
+    "controlFlowFlattening": {
+      "flattenedFunctions": 10,
+      "flattenedBlocks": 497,
+      "skippedFunctions": 0
+    },
+    "fakeCodeInsertion": {
+      "totalBogusInstructions": 1455,
+      "fakeBlocks": 42,
+      "fakeLoops": 23,
+      "fakeConditionals": 31
+    }
+  }
+}

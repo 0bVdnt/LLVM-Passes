@@ -1,0 +1,16 @@
+Starting multi-cycle obfuscation with 5 cycles
+  Cycle 1/5
+CFF_METRICS:{"flattenedFunctions":4,"flattenedBlocks":27,"skippedFunctions":0}
+  Cycle 2/5
+CFF_METRICS:{"flattenedFunctions":4,"flattenedBlocks":99,"skippedFunctions":0}
+  Cycle 3/5
+CFF_METRICS:{"flattenedFunctions":4,"flattenedBlocks":211,"skippedFunctions":0}
+  Cycle 4/5
+CFF_METRICS:{"flattenedFunctions":4,"flattenedBlocks":361,"skippedFunctions":0}
+  Cycle 5/5
+CFF_METRICS:{"flattenedFunctions":4,"flattenedBlocks":455,"skippedFunctions":0}
+Writing '.switch_basic.dot'...
+Writing '.switch_fallthrough.dot'...
+Writing '.nested_switch.dot'...
+Writing '.main.dot'...
+Writing '.chakravyuha_decrypt_string.dot'...

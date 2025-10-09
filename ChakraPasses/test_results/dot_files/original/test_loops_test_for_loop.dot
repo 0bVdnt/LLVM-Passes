@@ -1,0 +1,14 @@
+digraph "CFG for 'test_for_loop' function" {
+	label="CFG for 'test_for_loop' function";
+
+	Node0x6165c1985270 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#d6524470" fontname="Courier",label="{1:\l|  %2 = alloca i32, align 4\l  %3 = alloca i32, align 4\l  %4 = alloca i32, align 4\l  store i32 %0, ptr %2, align 4\l  store i32 0, ptr %3, align 4\l  store i32 0, ptr %4, align 4\l  br label %5\l}"];
+	Node0x6165c1985270 -> Node0x6165c19853a0;
+	Node0x6165c19853a0 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870" fontname="Courier",label="{5:\l|  %6 = load i32, ptr %4, align 4\l  %7 = load i32, ptr %2, align 4\l  %8 = icmp slt i32 %6, %7\l  br i1 %8, label %9, label %16\l|{<s0>T|<s1>F}}"];
+	Node0x6165c19853a0:s0 -> Node0x6165c19eabf0;
+	Node0x6165c19853a0:s1 -> Node0x6165c19eac50;
+	Node0x6165c19eabf0 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870" fontname="Courier",label="{9:\l|  %10 = load i32, ptr %4, align 4\l  %11 = load i32, ptr %3, align 4\l  %12 = add nsw i32 %11, %10\l  store i32 %12, ptr %3, align 4\l  br label %13\l}"];
+	Node0x6165c19eabf0 -> Node0x6165c19eaf40;
+	Node0x6165c19eaf40 [shape=record,color="#b70d28ff", style=filled, fillcolor="#b70d2870" fontname="Courier",label="{13:\l|  %14 = load i32, ptr %4, align 4\l  %15 = add nsw i32 %14, 1\l  store i32 %15, ptr %4, align 4\l  br label %5, !llvm.loop !6\l}"];
+	Node0x6165c19eaf40 -> Node0x6165c19853a0;
+	Node0x6165c19eac50 [shape=record,color="#3d50c3ff", style=filled, fillcolor="#d6524470" fontname="Courier",label="{16:\l|  %17 = load i32, ptr %3, align 4\l  ret i32 %17\l}"];
+}

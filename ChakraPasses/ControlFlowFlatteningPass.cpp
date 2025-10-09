@@ -357,10 +357,47 @@ private:
   }
 };
 
-} // end anonymous namespace
+struct MultiCycleObfuscationPass
+    : public PassInfoMixin<MultiCycleObfuscationPass> {
+  unsigned NumCycles;
+
+  MultiCycleObfuscationPass(unsigned Cycles = 1) : NumCycles(Cycles) {}
+
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM) {
+    auto &R = chakravyuha::ReportData::get();
+    R.cyclesRequested = NumCycles;
+    R.startTimer();
+
+    errs() << "Starting multi-cycle obfuscation with " << NumCycles
+           << " cycles\n";
+
+    for (unsigned Cycle = 0; Cycle < NumCycles; ++Cycle) {
+      errs() << "  Cycle " << (Cycle + 1) << "/" << NumCycles << "\n";
+
+      // Run string encryption (only first cycle)
+      if (Cycle == 0) {
+        StringEncryptionPass SEP;
+        SEP.run(M, MAM);
+      }
+
+      // Run control flow flattening
+      ControlFlowFlatteningPass CFP;
+      CFP.run(M, MAM);
+
+      // Run fake code insertion
+      FakeCodeInsertionPass FCP;
+      FCP.run(M, MAM);
+
+      R.cyclesCompleted = Cycle + 1;
+    }
+
+    return PreservedAnalyses::none();
+  }
+};
+} // namespace
 
 extern "C" LLVM_ATTRIBUTE_WEAK PassPluginLibraryInfo llvmGetPassPluginInfo() {
-  return {LLVM_PLUGIN_API_VERSION, "ChakravyuhaPassesPlugin", "v0.3",
+  return {LLVM_PLUGIN_API_VERSION, "ChakravyuhaPassesPlugin", "v0.4",
           [](PassBuilder &PB) {
             PB.registerPipelineParsingCallback(
                 [](StringRef Name, ModulePassManager &MPM,
@@ -385,6 +422,21 @@ extern "C" LLVM_ATTRIBUTE_WEAK PassPluginLibraryInfo llvmGetPassPluginInfo() {
                     MPM.addPass(StringEncryptionPass());
                     MPM.addPass(ControlFlowFlatteningPass());
                     MPM.addPass(FakeCodeInsertionPass());
+                    MPM.addPass(EmitChakravyuhaReportPass());
+                    return true;
+                  }
+                  // Multi-cycle obfuscation
+                  if (Name.starts_with("chakravyuha-multi-cycle")) {
+                    unsigned Cycles = 1;
+                    if (Name.size() > 23 && Name[23] == '-') {
+                      StringRef CycleStr = Name.substr(24);
+                      CycleStr.getAsInteger(10, Cycles);
+                      if (Cycles == 0)
+                        Cycles = 1;
+                      if (Cycles > 10)
+                        Cycles = 10; // Cap at 10 cycles
+                    }
+                    MPM.addPass(MultiCycleObfuscationPass(Cycles));
                     MPM.addPass(EmitChakravyuhaReportPass());
                     return true;
                   }
